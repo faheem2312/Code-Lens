@@ -1,0 +1,24 @@
+# Environment
+.env
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# MLflow
+mlruns/
+mlflow.db
+
+# Data
+data/
+*.json.bak
+
+# Build
+dist/
+build/
+*.egg-info/
