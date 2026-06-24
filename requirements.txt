@@ -1,0 +1,32 @@
+# Core
+openai
+supabase
+pgvector
+psycopg2-binary
+
+# Parsing
+tree-sitter==0.21.3
+tree-sitter-python==0.21.0
+tree-sitter-javascript==0.21.0
+
+# Retrieval
+rank-bm25
+cohere
+
+# API
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+
+# Compliance
+presidio-analyzer
+presidio-anonymizer
+spacy
+
+# MLOps
+mlflow
+ragas
+langfuse
+gitpython
+tiktoken
