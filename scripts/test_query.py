@@ -4,8 +4,8 @@ sys.path.insert(0, os.getcwd())
 from src.query import query_codelens
 
 result = query_codelens(
-    question="Where is routing handled?",
-    repo_url="https://github.com/tiangolo/fastapi",
+    question="How does signing work?",
+    repo_url="https://github.com/pallets/itsdangerous",
 )
 
 print("=" * 60)
