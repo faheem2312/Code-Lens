@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-mlflow.set_tracking_uri("mlruns")
+mlflow.set_tracking_uri("sqlite:///mlflow.db")
 mlflow.set_experiment("codelens-rag")
 
 
