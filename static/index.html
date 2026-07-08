@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CodeLens</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container { max-width: 860px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #58a6ff, #a371f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      font-size: 0.85rem;
+      color: #8b949e;
+      margin-top: 2px;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    input, textarea {
+      width: 100%;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e6edf3;
+      font-size: 0.95rem;
+      padding: 0.75rem 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, textarea:focus { border-color: #58a6ff; }
+    textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    button {
+      width: 100%;
+      padding: 0.85rem;
+      background: linear-gradient(135deg, #238636, #2ea043);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: opacity 0.2s;
+    }
+
+    button:hover { opacity: 0.88; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .metrics {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .metric-val {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #58a6ff;
+    }
+
+    .metric-lbl {
+      font-size: 0.75rem;
+      color: #8b949e;
+      text-transform: uppercase;
+    }
+
+    .answer-box strong { color: #58a6ff; }
+
+    .answer-box {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1rem;
+      font-size: 0.93rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .sources-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sources-list li {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.82rem;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      color: #a371f7;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid #30363d;
+      border-top-color: #58a6ff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none; }
+
+    .error-box {
+      background: #3d1c1c;
+      border: 1px solid #f85149;
+      border-radius: 8px;
+      padding: 1rem;
+      color: #f85149;
+      font-size: 0.9rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: #1f2d3d;
+      color: #58a6ff;
+      border: 1px solid #1d4b6e;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div>
+      <h1>🔍 CodeLens <span class="badge">v1.0</span></h1>
+      <p>AI-powered codebase Q&A — powered by Gemini + pgvector</p>
+    </div>
+  </header>
+
+  <!-- Input card -->
+  <div class="card">
+    <div style="margin-bottom:1rem;">
+      <label>GitHub Repository URL</label>
+      <input id="repoUrl" type="text"
+        placeholder="https://github.com/pallets/itsdangerous"
+        value="https://github.com/pallets/itsdangerous" />
+    </div>
+    <div>
+      <label>Your Question</label>
+      <textarea id="question"
+        placeholder="How does token signing work?">How does signing work?</textarea>
+    </div>
+    <div class="row" style="margin-top:1rem;">
+      <div>
+        <label>Top K chunks</label>
+        <input id="topK" type="number" value="5" min="1" max="20" />
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button id="askBtn" onclick="askQuestion()">Ask CodeLens</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="card hidden" id="metricsCard">
+    <div class="metrics">
+      <div class="metric">
+        <span class="metric-val" id="mLatency">—</span>
+        <span class="metric-lbl">Latency</span>
+      </div>
+      <div class="metric">
+        <span class="metric-val" id="mTokens">—</span>
+        <span class="metric-lbl">Tokens</span>
+      </div>
+      <div class="metric">
+        <span class="metric-val" id="mChunks">—</span>
+        <span class="metric-lbl">Chunks</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Answer -->
+  <div class="card hidden" id="answerCard">
+    <label>Answer</label>
+    <div class="answer-box" id="answerBox"></div>
+  </div>
+
+  <!-- Sources -->
+  <div class="card hidden" id="sourcesCard">
+    <label>Sources</label>
+    <ul class="sources-list" id="sourcesList"></ul>
+  </div>
+
+  <!-- Error -->
+  <div class="hidden" id="errorCard">
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+</div>
+
+<script>
+  async function askQuestion() {
+    const btn      = document.getElementById('askBtn');
+    const repoUrl  = document.getElementById('repoUrl').value.trim();
+    const question = document.getElementById('question').value.trim();
+    const topK     = parseInt(document.getElementById('topK').value) || 5;
+
+    if (!repoUrl || !question) {
+      alert('Please fill in both the repo URL and your question.');
+      return;
+    }
+
+    // Reset UI
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Thinking...';
+    ['metricsCard','answerCard','sourcesCard','errorCard'].forEach(id => {
+      document.getElementById(id).classList.add('hidden');
+    });
+
+    try {
+      const res = await fetch('/api/v1/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, repo_url: repoUrl, top_k: topK })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'API error');
+      }
+
+      const data = await res.json();
+
+      // Metrics
+      document.getElementById('mLatency').textContent =
+        data.latency_ms > 1000
+          ? (data.latency_ms / 1000).toFixed(1) + 's'
+          : data.latency_ms + 'ms';
+      document.getElementById('mTokens').textContent  = data.tokens;
+      document.getElementById('mChunks').textContent  = data.chunks.length;
+      document.getElementById('metricsCard').classList.remove('hidden');
+
+      // Answer
+      document.getElementById('answerBox').innerHTML = 
+        data.answer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+               .replace(/\n/g, '<br>');
+      document.getElementById('answerCard').classList.remove('hidden');
+
+      // Sources
+      const list = document.getElementById('sourcesList');
+      list.innerHTML = '';
+      data.sources.forEach(src => {
+        const li = document.createElement('li');
+        li.textContent = src;
+        list.appendChild(li);
+      });
+      document.getElementById('sourcesCard').classList.remove('hidden');
+
+    } catch (err) {
+      document.getElementById('errorBox').textContent = '❌ ' + err.message;
+      document.getElementById('errorCard').classList.remove('hidden');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Ask CodeLens';
+    }
+  }
+
+  // Allow Enter key in textarea with Ctrl
+  document.getElementById('question').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.ctrlKey) askQuestion();
+  });
+</script>
+</body>
+</html>
