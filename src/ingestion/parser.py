@@ -32,7 +32,7 @@ def get_parser(extension: str) -> Parser | None:
     if not lang:
         return None
     parser = Parser()
-    parser.language = lang     # ← 0.23.x API: set language after construction
+    parser.language = lang
     return parser
 
 
