@@ -9,9 +9,11 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN python -m spacy download en_core_web_lg
+# Use small model instead of lg — saves ~350MB RAM
+RUN python -m spacy download en_core_web_sm
 
 COPY src/ ./src/
+COPY static/ ./static/
 COPY .env.example .env
 
 EXPOSE 8000
