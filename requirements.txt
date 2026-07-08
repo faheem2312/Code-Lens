@@ -3,6 +3,7 @@ openai
 supabase
 pgvector
 psycopg2-binary
+google-genai>=1.16.0
 
 # Parsing
 tree-sitter==0.23.2
