@@ -6,180 +6,104 @@
   <title>CodeLens</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0d1117;
-      color: #e6edf3;
-      min-height: 100vh;
-      padding: 2rem;
+      background: #0d1117; color: #e6edf3;
+      min-height: 100vh; padding: 2rem;
     }
-
     .container { max-width: 860px; margin: 0 auto; }
-
-    header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 2.5rem;
-    }
-
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 2rem; }
     header h1 {
-      font-size: 1.8rem;
-      font-weight: 700;
+      font-size: 1.8rem; font-weight: 700;
       background: linear-gradient(135deg, #58a6ff, #a371f7);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
+    header p { font-size: 0.85rem; color: #8b949e; margin-top: 2px; }
 
-    header p {
-      font-size: 0.85rem;
-      color: #8b949e;
-      margin-top: 2px;
+    .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #30363d; }
+    .tab {
+      padding: 0.6rem 1.2rem; cursor: pointer; font-size: 0.9rem;
+      color: #8b949e; border-bottom: 2px solid transparent;
+      transition: all 0.2s;
     }
+    .tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
     .card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1.25rem;
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem;
     }
-
     label {
-      display: block;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #8b949e;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.5rem;
+      display: block; font-size: 0.8rem; font-weight: 600;
+      color: #8b949e; text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: 0.5rem;
     }
-
     input, textarea {
-      width: 100%;
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      color: #e6edf3;
-      font-size: 0.95rem;
-      padding: 0.75rem 1rem;
-      outline: none;
-      transition: border-color 0.2s;
+      width: 100%; background: #0d1117; border: 1px solid #30363d;
+      border-radius: 8px; color: #e6edf3; font-size: 0.95rem;
+      padding: 0.75rem 1rem; outline: none; transition: border-color 0.2s;
     }
-
     input:focus, textarea:focus { border-color: #58a6ff; }
     textarea { resize: vertical; min-height: 80px; font-family: inherit; }
-
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
     button {
-      width: 100%;
-      padding: 0.85rem;
+      width: 100%; padding: 0.85rem;
       background: linear-gradient(135deg, #238636, #2ea043);
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 1rem;
-      transition: opacity 0.2s;
+      border: none; border-radius: 8px; color: #fff;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+      margin-top: 1rem; transition: opacity 0.2s;
     }
-
     button:hover { opacity: 0.88; }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .metrics {
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
+    button.secondary {
+      background: linear-gradient(135deg, #1f6feb, #388bfd);
     }
 
-    .metric {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .metric-val {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: #58a6ff;
-    }
-
-    .metric-lbl {
-      font-size: 0.75rem;
-      color: #8b949e;
-      text-transform: uppercase;
-    }
-
-    .answer-box strong { color: #58a6ff; }
+    .metrics { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .metric { display: flex; flex-direction: column; gap: 2px; }
+    .metric-val { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    .metric-lbl { font-size: 0.75rem; color: #8b949e; text-transform: uppercase; }
 
     .answer-box {
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 1rem;
-      font-size: 0.93rem;
-      line-height: 1.7;
-      white-space: pre-wrap;
-      word-break: break-word;
+      background: #0d1117; border: 1px solid #30363d;
+      border-radius: 8px; padding: 1rem; font-size: 0.93rem;
+      line-height: 1.7; white-space: pre-wrap; word-break: break-word;
     }
+    .answer-box strong { color: #58a6ff; }
 
-    .sources-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
+    .sources-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
     .sources-list li {
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      padding: 0.5rem 0.75rem;
-      font-size: 0.82rem;
-      font-family: 'SFMono-Regular', Consolas, monospace;
-      color: #a371f7;
+      background: #0d1117; border: 1px solid #30363d;
+      border-radius: 6px; padding: 0.5rem 0.75rem;
+      font-size: 0.82rem; font-family: monospace; color: #a371f7;
     }
 
     .spinner {
-      display: inline-block;
-      width: 18px; height: 18px;
-      border: 2px solid #30363d;
-      border-top-color: #58a6ff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-right: 8px;
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid #30363d; border-top-color: #58a6ff;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 8px;
     }
-
     @keyframes spin { to { transform: rotate(360deg); } }
-
     .hidden { display: none; }
 
     .error-box {
-      background: #3d1c1c;
-      border: 1px solid #f85149;
-      border-radius: 8px;
-      padding: 1rem;
-      color: #f85149;
-      font-size: 0.9rem;
+      background: #3d1c1c; border: 1px solid #f85149;
+      border-radius: 8px; padding: 1rem; color: #f85149; font-size: 0.9rem;
     }
-
+    .success-box {
+      background: #1a2d1a; border: 1px solid #2ea043;
+      border-radius: 8px; padding: 1rem; color: #3fb950; font-size: 0.9rem;
+    }
     .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 20px;
-      font-size: 0.72rem;
-      font-weight: 600;
-      background: #1f2d3d;
-      color: #58a6ff;
-      border: 1px solid #1d4b6e;
-      margin-left: 8px;
-      vertical-align: middle;
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 600; background: #1f2d3d;
+      color: #58a6ff; border: 1px solid #1d4b6e; margin-left: 8px;
     }
+    .hint { font-size: 0.78rem; color: #8b949e; margin-top: 0.4rem; }
   </style>
 </head>
 <body>
@@ -192,68 +116,103 @@
     </div>
   </header>
 
-  <!-- Input card -->
-  <div class="card">
-    <div style="margin-bottom:1rem;">
-      <label>GitHub Repository URL</label>
-      <input id="repoUrl" type="text"
-        placeholder="https://github.com/pallets/itsdangerous"
-        value="https://github.com/pallets/itsdangerous" />
-    </div>
-    <div>
-      <label>Your Question</label>
-      <textarea id="question"
-        placeholder="How does token signing work?">How does signing work?</textarea>
-    </div>
-    <div class="row" style="margin-top:1rem;">
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('query')">💬 Ask Question</div>
+    <div class="tab" onclick="switchTab('index')">📥 Index Repository</div>
+  </div>
+
+  <!-- Query Tab -->
+  <div id="tab-query" class="tab-content active">
+    <div class="card">
+      <div style="margin-bottom:1rem;">
+        <label>GitHub Repository URL</label>
+        <input id="repoUrl" type="text"
+          placeholder="https://github.com/pallets/itsdangerous"
+          value="https://github.com/pallets/itsdangerous" />
+        <p class="hint">Must be indexed first using the "Index Repository" tab</p>
+      </div>
       <div>
-        <label>Top K chunks</label>
-        <input id="topK" type="number" value="5" min="1" max="20" />
+        <label>Your Question</label>
+        <textarea id="question"
+          placeholder="How does token signing work?">How does signing work?</textarea>
       </div>
-      <div style="display:flex;align-items:flex-end;">
-        <button id="askBtn" onclick="askQuestion()">Ask CodeLens</button>
+      <div class="row" style="margin-top:1rem;">
+        <div>
+          <label>Top K chunks</label>
+          <input id="topK" type="number" value="5" min="1" max="20" />
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <button id="askBtn" onclick="askQuestion()">Ask CodeLens</button>
+        </div>
       </div>
+    </div>
+
+    <div class="card hidden" id="metricsCard">
+      <div class="metrics">
+        <div class="metric">
+          <span class="metric-val" id="mLatency">—</span>
+          <span class="metric-lbl">Latency</span>
+        </div>
+        <div class="metric">
+          <span class="metric-val" id="mTokens">—</span>
+          <span class="metric-lbl">Tokens</span>
+        </div>
+        <div class="metric">
+          <span class="metric-val" id="mChunks">—</span>
+          <span class="metric-lbl">Chunks</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card hidden" id="answerCard">
+      <label>Answer</label>
+      <div class="answer-box" id="answerBox"></div>
+    </div>
+
+    <div class="card hidden" id="sourcesCard">
+      <label>Sources</label>
+      <ul class="sources-list" id="sourcesList"></ul>
+    </div>
+
+    <div class="hidden" id="queryErrorCard">
+      <div class="error-box" id="queryErrorBox"></div>
     </div>
   </div>
 
-  <!-- Metrics -->
-  <div class="card hidden" id="metricsCard">
-    <div class="metrics">
-      <div class="metric">
-        <span class="metric-val" id="mLatency">—</span>
-        <span class="metric-lbl">Latency</span>
+  <!-- Index Tab -->
+  <div id="tab-index" class="tab-content">
+    <div class="card">
+      <div style="margin-bottom:1rem;">
+        <label>GitHub Repository URL</label>
+        <input id="indexRepoUrl" type="text"
+          placeholder="https://github.com/pallets/click" />
+        <p class="hint">Public GitHub repos only. Indexing takes 2-10 minutes depending on repo size.</p>
       </div>
-      <div class="metric">
-        <span class="metric-val" id="mTokens">—</span>
-        <span class="metric-lbl">Tokens</span>
-      </div>
-      <div class="metric">
-        <span class="metric-val" id="mChunks">—</span>
-        <span class="metric-lbl">Chunks</span>
-      </div>
+      <button class="secondary" id="indexBtn" onclick="indexRepo()">
+        📥 Index Repository
+      </button>
     </div>
-  </div>
 
-  <!-- Answer -->
-  <div class="card hidden" id="answerCard">
-    <label>Answer</label>
-    <div class="answer-box" id="answerBox"></div>
-  </div>
-
-  <!-- Sources -->
-  <div class="card hidden" id="sourcesCard">
-    <label>Sources</label>
-    <ul class="sources-list" id="sourcesList"></ul>
-  </div>
-
-  <!-- Error -->
-  <div class="hidden" id="errorCard">
-    <div class="error-box" id="errorBox"></div>
+    <div class="hidden" id="indexSuccessCard">
+      <div class="success-box" id="indexSuccessBox"></div>
+    </div>
+    <div class="hidden" id="indexErrorCard">
+      <div class="error-box" id="indexErrorBox"></div>
+    </div>
   </div>
 
 </div>
 
 <script>
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', ['query','index'][i] === tab);
+    });
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+  }
+
   async function askQuestion() {
     const btn      = document.getElementById('askBtn');
     const repoUrl  = document.getElementById('repoUrl').value.trim();
@@ -265,10 +224,9 @@
       return;
     }
 
-    // Reset UI
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Thinking...';
-    ['metricsCard','answerCard','sourcesCard','errorCard'].forEach(id => {
+    ['metricsCard','answerCard','sourcesCard','queryErrorCard'].forEach(id => {
       document.getElementById(id).classList.add('hidden');
     });
 
@@ -286,7 +244,6 @@
 
       const data = await res.json();
 
-      // Metrics
       document.getElementById('mLatency').textContent =
         data.latency_ms > 1000
           ? (data.latency_ms / 1000).toFixed(1) + 's'
@@ -295,13 +252,12 @@
       document.getElementById('mChunks').textContent  = data.chunks.length;
       document.getElementById('metricsCard').classList.remove('hidden');
 
-      // Answer
-      document.getElementById('answerBox').innerHTML = 
-        data.answer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-               .replace(/\n/g, '<br>');
+      document.getElementById('answerBox').innerHTML =
+        data.answer
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\n/g, '<br>');
       document.getElementById('answerCard').classList.remove('hidden');
 
-      // Sources
       const list = document.getElementById('sourcesList');
       list.innerHTML = '';
       data.sources.forEach(src => {
@@ -312,15 +268,64 @@
       document.getElementById('sourcesCard').classList.remove('hidden');
 
     } catch (err) {
-      document.getElementById('errorBox').textContent = '❌ ' + err.message;
-      document.getElementById('errorCard').classList.remove('hidden');
+      document.getElementById('queryErrorBox').textContent = '❌ ' + err.message;
+      document.getElementById('queryErrorCard').classList.remove('hidden');
     } finally {
       btn.disabled = false;
       btn.innerHTML = 'Ask CodeLens';
     }
   }
 
-  // Allow Enter key in textarea with Ctrl
+  async function indexRepo() {
+    const btn     = document.getElementById('indexBtn');
+    const repoUrl = document.getElementById('indexRepoUrl').value.trim();
+
+    if (!repoUrl) {
+      alert('Please enter a GitHub repository URL.');
+      return;
+    }
+
+    if (!repoUrl.startsWith('https://github.com/')) {
+      alert('Please enter a valid GitHub URL (https://github.com/...)');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Starting indexing...';
+    ['indexSuccessCard','indexErrorCard'].forEach(id => {
+      document.getElementById(id).classList.add('hidden');
+    });
+
+    try {
+      const res = await fetch('/api/v1/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo_url: repoUrl, repo_path: '' })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'API error');
+      }
+
+      const data = await res.json();
+      document.getElementById('indexSuccessBox').innerHTML =
+        `✅ <strong>Indexing started!</strong><br><br>` +
+        `Repo: ${repoUrl}<br>` +
+        `Status: ${data.status}<br><br>` +
+        `⏱️ This runs in the background. Wait 2-5 minutes then switch to the ` +
+        `"Ask Question" tab and use this repo URL to query.`;
+      document.getElementById('indexSuccessCard').classList.remove('hidden');
+
+    } catch (err) {
+      document.getElementById('indexErrorBox').textContent = '❌ ' + err.message;
+      document.getElementById('indexErrorCard').classList.remove('hidden');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '📥 Index Repository';
+    }
+  }
+
   document.getElementById('question').addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.ctrlKey) askQuestion();
   });

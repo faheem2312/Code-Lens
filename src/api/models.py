@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class IngestRequest(BaseModel):
-    repo_path: str
+    repo_path: str = ""
     repo_url:  str
 
 class QueryRequest(BaseModel):

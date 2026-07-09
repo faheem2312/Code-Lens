@@ -18,9 +18,30 @@ def health_check():
 
 @router.post("/ingest", response_model=IngestResponse)
 def ingest(request: IngestRequest, background_tasks: BackgroundTasks):
+    """
+    Clone a GitHub repo and index it into Supabase.
+    Accepts either:
+      - repo_url only (server clones it)
+      - repo_path + repo_url (local path, for CLI use)
+    """
     try:
-        background_tasks.add_task(index_repository, request.repo_path, request.repo_url)
-        return IngestResponse(message="Ingestion started", repo_url=request.repo_url, status="processing")
+        if request.repo_path and os.path.exists(request.repo_path):
+            # Local path provided — index directly
+            background_tasks.add_task(
+                index_repository,
+                request.repo_path,
+                request.repo_url,
+            )
+        else:
+            # No local path — clone from GitHub
+            from src.ingestion.indexer import clone_and_index
+            background_tasks.add_task(clone_and_index, request.repo_url)
+
+        return IngestResponse(
+            message="Indexing started — this takes a few minutes for large repos",
+            repo_url=request.repo_url,
+            status="processing",
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
