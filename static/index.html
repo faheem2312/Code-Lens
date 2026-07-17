@@ -3,332 +3,1735 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CodeLens</title>
+  <title>CodeLens — AI-Powered Codebase Search</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23ef4444%22 stroke-width=%222.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><circle cx=%2210.5%22 cy=%2210.5%22 r=%226.5%22 /><line x1=%2215.5%22 y1=%2215.5%22 x2=%2220%22 y2=%2220%22 /><path d=%22M8 8.5 L6 10.5 L8 12.5%22 stroke-width=%222%22 /><path d=%22M13 8.5 L15 10.5 L13 12.5%22 stroke-width=%222%22 /></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* Styling variables & overrides for Premium RGB Colorful Theme */
+    :root {
+      --bg-darker: #f3f4f6; 
+      --bg-dark: #e5e7eb;
+      --card-bg: rgba(255, 255, 255, 0.82);
+      --card-border: rgba(0, 0, 0, 0.06);
+      --text-main: #0f172a; 
+      --text-sub: #334155;  
+      --text-dim: #475569;  
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0d1117; color: #e6edf3;
-      min-height: 100vh; padding: 2rem;
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      /* Constantly moving RGB pastel background gradient */
+      background: linear-gradient(-45deg, #fee2e2, #dcfce7, #dbeafe, #fef08a, #fee2e2);
+      background-size: 400% 400%;
+      animation: rgbGradientAnimation 16s ease infinite;
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
     }
-    .container { max-width: 860px; margin: 0 auto; }
-    header { display: flex; align-items: center; gap: 12px; margin-bottom: 2rem; }
-    header h1 {
-      font-size: 1.8rem; font-weight: 700;
-      background: linear-gradient(135deg, #58a6ff, #a371f7);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+
+    @keyframes rgbGradientAnimation {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
-    header p { font-size: 0.85rem; color: #8b949e; margin-top: 2px; }
 
-    .tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid #30363d; }
-    .tab {
-      padding: 0.6rem 1.2rem; cursor: pointer; font-size: 0.9rem;
-      color: #8b949e; border-bottom: 2px solid transparent;
-      transition: all 0.2s;
+    /* Aurora Background Glows (Animate colors through Red, Green, Blue) */
+    .aurora-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
     }
-    .tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+    .aurora-1 {
+      position: absolute;
+      top: -10%;
+      left: -10%;
+      width: 50%;
+      height: 50%;
+      border-radius: 50%;
+      filter: blur(80px);
+      animation: float 20s infinite alternate, rgbGlow1 12s linear infinite;
+    }
+    .aurora-2 {
+      position: absolute;
+      bottom: -10%;
+      right: -10%;
+      width: 60%;
+      height: 60%;
+      border-radius: 50%;
+      filter: blur(100px);
+      animation: float 25s infinite alternate-reverse, rgbGlow2 12s linear infinite;
+    }
+    @keyframes float {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(5%, 5%) scale(1.1); }
+    }
+    @keyframes rgbGlow1 {
+      0% { background: radial-gradient(circle, rgba(239, 68, 68, 0.15) 0%, transparent 70%); }
+      33% { background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%); }
+      66% { background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%); }
+      100% { background: radial-gradient(circle, rgba(239, 68, 68, 0.15) 0%, transparent 70%); }
+    }
+    @keyframes rgbGlow2 {
+      0% { background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%); }
+      33% { background: radial-gradient(circle, rgba(239, 68, 68, 0.12) 0%, transparent 70%); }
+      66% { background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%); }
+      100% { background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%); }
+    }
 
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    /* App Container */
+    .app-container {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      z-index: 1;
+    }
 
-    .card {
-      background: #161b22; border: 1px solid #30363d;
-      border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem;
+    /* Header */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .logo-icon {
+      animation: rgbTextCycle 9s linear infinite;
+    }
+    .title-wrap h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      /* Constantly changing text gradient */
+      background: linear-gradient(90deg, #ef4444, #10b981, #3b82f6, #ef4444);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: rgbTextGradient 8s linear infinite;
+      letter-spacing: -0.02em;
+    }
+    @keyframes rgbTextGradient {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 300% 50%; }
+    }
+    .title-wrap p {
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      font-weight: 500;
+    }
+
+    /* Health status bar */
+    .health-status-bar {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      padding: 0.5rem 1rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+      backdrop-filter: blur(8px);
+      animation: rgbHealthBorder 9s linear infinite;
+    }
+    @keyframes rgbHealthBorder {
+      0% { border-color: rgba(239, 68, 68, 0.2); }
+      33% { border-color: rgba(16, 185, 129, 0.2); }
+      66% { border-color: rgba(59, 130, 246, 0.2); }
+      100% { border-color: rgba(239, 68, 68, 0.2); }
+    }
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 700;
+      color: #0d9488;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #14b8a6;
+    }
+    .status-dot.online {
+      box-shadow: 0 0 8px #14b8a6;
+      animation: pulse-dot 1.5s infinite;
+    }
+    @keyframes pulse-dot {
+      0% { transform: scale(0.95); opacity: 0.5; }
+      50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 12px #14b8a6; }
+      100% { transform: scale(0.95); opacity: 0.5; }
+    }
+    .model-tags {
+      display: flex;
+      gap: 0.75rem;
+      color: var(--text-sub);
+    }
+    .model-tag-item {
+      border-left: 1px solid rgba(0, 0, 0, 0.08);
+      padding-left: 0.75rem;
+    }
+    .model-tag-item strong {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    /* Dashboard Grid */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 2rem;
+      flex: 1;
+    }
+
+    /* Glass Card */
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.01);
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+    .glass-card:hover {
+      border-color: rgba(0, 0, 0, 0.1);
+      box-shadow: 0 12px 35px -10px rgba(0, 0, 0, 0.08);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      animation: rgbTextCycle 9s linear infinite;
+    }
+    .card-header h2 {
+      font-size: 0.95rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Form inputs */
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    .form-group:last-child {
+      margin-bottom: 0;
     }
     label {
-      display: block; font-size: 0.8rem; font-weight: 600;
-      color: #8b949e; text-transform: uppercase;
-      letter-spacing: 0.05em; margin-bottom: 0.5rem;
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      animation: rgbTextCycle 9s linear infinite;
     }
-    input, textarea {
-      width: 100%; background: #0d1117; border: 1px solid #30363d;
-      border-radius: 8px; color: #e6edf3; font-size: 0.95rem;
-      padding: 0.75rem 1rem; outline: none; transition: border-color 0.2s;
+    .input-with-icon {
+      position: relative;
+      display: flex;
+      align-items: center;
     }
-    input:focus, textarea:focus { border-color: #58a6ff; }
-    textarea { resize: vertical; min-height: 80px; font-family: inherit; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-
-    button {
-      width: 100%; padding: 0.85rem;
-      background: linear-gradient(135deg, #238636, #2ea043);
-      border: none; border-radius: 8px; color: #fff;
-      font-size: 1rem; font-weight: 600; cursor: pointer;
-      margin-top: 1rem; transition: opacity 0.2s;
+    .input-icon {
+      position: absolute;
+      left: 0.75rem;
+      animation: rgbTextCycle 9s linear infinite;
     }
-    button:hover { opacity: 0.88; }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-    button.secondary {
-      background: linear-gradient(135deg, #1f6feb, #388bfd);
+    input[type="text"] {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 10px;
+      color: var(--text-main);
+      padding: 0.75rem 1rem 0.75rem 2.25rem;
+      font-size: 0.9rem;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-
-    .metrics { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-    .metric { display: flex; flex-direction: column; gap: 2px; }
-    .metric-val { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
-    .metric-lbl { font-size: 0.75rem; color: #8b949e; text-transform: uppercase; }
-
-    .answer-box {
-      background: #0d1117; border: 1px solid #30363d;
-      border-radius: 8px; padding: 1rem; font-size: 0.93rem;
-      line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+    input[type="text"]:focus {
+      animation: rgbBorderCycle 9s linear infinite;
     }
-    .answer-box strong { color: #58a6ff; }
-
-    .sources-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
-    .sources-list li {
-      background: #0d1117; border: 1px solid #30363d;
-      border-radius: 6px; padding: 0.5rem 0.75rem;
-      font-size: 0.82rem; font-family: monospace; color: #a371f7;
+    .field-hint {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 0.4rem;
     }
 
+    /* Slider */
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .slider-badge {
+      padding: 1px 8px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      animation: rgbBadgeCycle 9s linear infinite;
+    }
+    @keyframes rgbBadgeCycle {
+      0% { background: rgba(239, 68, 68, 0.08); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+      33% { background: rgba(16, 185, 129, 0.08); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
+      66% { background: rgba(59, 130, 246, 0.08); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
+      100% { background: rgba(239, 68, 68, 0.08); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+    }
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 99px;
+      background: rgba(0, 0, 0, 0.06);
+      outline: none;
+      margin-top: 0.5rem;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.1s;
+      animation: rgbBgCycle 9s linear infinite;
+    }
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    /* Buttons */
+    .primary-btn {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: transform 0.15s, opacity 0.2s, box-shadow 0.2s;
+      animation: rgbBgCycle 9s linear infinite;
+    }
+    .primary-btn:hover {
+      opacity: 0.92;
+    }
+    .primary-btn:active {
+      transform: scale(0.98);
+    }
+    .primary-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+      animation: none !important;
+      background: var(--text-dim) !important;
+    }
+
+    /* Welcome Card */
+    .welcome-card {
+      text-align: center;
+      padding: 3rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: fadeIn 0.4s ease-out;
+    }
+    .glow-symbol {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      animation: pulse-glow 2.5s infinite ease-in-out, rgbGlowFilter 9s linear infinite;
+    }
+    @keyframes rgbGlowFilter {
+      0% { filter: drop-shadow(0 2px 10px rgba(239, 68, 68, 0.4)); }
+      33% { filter: drop-shadow(0 2px 10px rgba(16, 185, 129, 0.4)); }
+      66% { filter: drop-shadow(0 2px 10px rgba(59, 130, 246, 0.4)); }
+      100% { filter: drop-shadow(0 2px 10px rgba(239, 68, 68, 0.4)); }
+    }
+    @keyframes pulse-glow {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+    .welcome-card h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      color: var(--text-main);
+    }
+    .welcome-tag {
+      color: var(--text-sub);
+      max-width: 500px;
+      font-size: 0.92rem;
+      margin-bottom: 2rem;
+    }
+    .example-grid-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+      text-align: left;
+      align-self: flex-start;
+      animation: rgbTextCycle 9s linear infinite;
+    }
+    .example-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      width: 100%;
+    }
+    .example-item {
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .example-item:hover {
+      transform: translateY(-2px);
+      animation: rgbBorderCycleSoft 9s linear infinite;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+    @keyframes rgbBorderCycleSoft {
+      0% { border-color: rgba(239, 68, 68, 0.4); }
+      33% { border-color: rgba(16, 185, 129, 0.4); }
+      66% { border-color: rgba(59, 130, 246, 0.4); }
+      100% { border-color: rgba(239, 68, 68, 0.4); }
+    }
+    .example-item h3 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      animation: rgbTextCycle 9s linear infinite;
+    }
+    .example-item p {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+    }
+
+    /* Query Box Card */
+    .query-box-card {
+      padding: 1.25rem 1.5rem;
+    }
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .ctrl-enter-tag {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+    .textarea-wrap {
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+    }
+    textarea {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      padding: 0.85rem 3.5rem 0.85rem 1rem;
+      min-height: 80px;
+      max-height: 200px;
+      outline: none;
+      font-family: inherit;
+      resize: vertical;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    textarea:focus {
+      animation: rgbBorderCycle 9s linear infinite;
+    }
+    .ask-submit-btn {
+      position: absolute;
+      right: 0.75rem;
+      bottom: 0.75rem;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s, opacity 0.2s;
+      animation: rgbBgCycle 9s linear infinite;
+    }
+    .ask-submit-btn:hover {
+      opacity: 0.95;
+      transform: scale(1.05);
+    }
+    .ask-submit-btn:active {
+      transform: scale(0.95);
+    }
+    .ask-submit-btn:disabled {
+      background: var(--text-dim) !important;
+      box-shadow: none;
+      cursor: not-allowed;
+      opacity: 0.5;
+      animation: none !important;
+    }
+
+    /* Skeleton Loading State */
+    .skeleton-card {
+      padding: 2rem;
+      animation: pulse-skeleton 1.8s infinite ease-in-out;
+    }
+    @keyframes pulse-skeleton {
+      0% { opacity: 0.6; }
+      50% { opacity: 0.95; }
+      100% { opacity: 0.6; }
+    }
+    .skeleton-line {
+      height: 12px;
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 4px;
+      margin-bottom: 0.75rem;
+    }
+    .skeleton-line.title {
+      width: 40%;
+      height: 18px;
+      margin-bottom: 1.5rem;
+    }
+    .skeleton-line.badge-line {
+      width: 20%;
+      height: 10px;
+      margin-bottom: 2rem;
+    }
+    .skeleton-line.p1 { width: 90%; }
+    .skeleton-line.p2 { width: 85%; }
+    .skeleton-line.p3 { width: 95%; }
+    .skeleton-line.code {
+      height: 120px;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.02);
+      border-radius: 8px;
+      margin: 1.5rem 0;
+    }
+    .skeleton-line.p4 { width: 50%; }
+
+    /* Answer & Response Panels */
+    .answer-card-outer {
+      padding: 2rem;
+      animation: slideUp 0.3s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .answer-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      padding-bottom: 0.75rem;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      animation: rgbTextCycle 9s linear infinite;
+    }
+    .header-left h2 {
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+    .action-btn-pill {
+      background: rgba(0, 0, 0, 0.03);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      color: var(--text-main);
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .action-btn-pill:hover {
+      background: rgba(0, 0, 0, 0.06);
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+    .answer-body-content {
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: #1e293b;
+    }
+
+    /* Markdown formatting inside Answer */
+    .answer-body-content strong {
+      color: #1d4ed8;
+      font-weight: 700;
+    }
+    .answer-body-content p {
+      margin-bottom: 1rem;
+    }
+    .answer-body-content p:last-child {
+      margin-bottom: 0;
+    }
+    .answer-body-content li {
+      margin-left: 1.5rem;
+      margin-bottom: 0.4rem;
+    }
+    .inline-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      background: rgba(0, 0, 0, 0.03);
+      padding: 2px 6px;
+      border-radius: 4px;
+      animation: rgbTextCycle 9s linear infinite, rgbBorderCycleSoft 9s linear infinite;
+    }
+    
+    /* Code container block pops with editor slate look */
+    .code-block-container {
+      margin: 1.25rem 0;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 10px;
+      background: #1e293b;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      animation: rgbBorderCycleSoft 9s linear infinite;
+    }
+    .code-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 0.4rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.75rem;
+    }
+    .code-block-lang {
+      color: rgba(255, 255, 255, 0.65);
+      font-family: monospace;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .copy-code-btn {
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+    }
+    .copy-code-btn:hover {
+      color: #ffffff;
+    }
+    .copy-code-btn .icon {
+      width: 12px;
+      height: 12px;
+      fill: currentColor;
+    }
+    .copy-code-btn .icon.success {
+      fill: #10b981;
+    }
+    .answer-body-content pre {
+      padding: 1rem;
+      overflow-x: auto;
+      margin: 0;
+    }
+    .answer-body-content code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      color: #f1f5f9;
+      white-space: pre;
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .metric-card {
+      border-radius: 12px;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: transform 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    .metric-card:hover {
+      transform: translateY(-2px);
+    }
+    .metric-card:nth-child(1) {
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+    .metric-card:nth-child(1) .metric-value {
+      color: #dc2626;
+    }
+    .metric-card:nth-child(2) {
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+    .metric-card:nth-child(2) .metric-value {
+      color: #059669;
+    }
+    .metric-card:nth-child(3) {
+      border-color: rgba(59, 130, 246, 0.2);
+    }
+    .metric-card:nth-child(3) .metric-value {
+      color: #2563eb;
+    }
+    .metric-icon {
+      font-size: 1.4rem;
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+    }
+    .metric-details {
+      display: flex;
+      flex-direction: column;
+    }
+    .metric-value {
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+    .metric-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--text-sub);
+      letter-spacing: 0.04em;
+      font-weight: 600;
+    }
+
+    /* Sources Context Chunks */
+    .sources-card-outer {
+      padding: 1.5rem 2rem;
+    }
+    .chunks-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+    .chunk-card {
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 12px;
+      padding: 1rem;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+    .chunk-card:hover {
+      animation: rgbBorderCycleSoft 9s linear infinite;
+      background: rgba(255, 255, 255, 0.92);
+    }
+    .chunk-file-link {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-weight: 600;
+      animation: rgbTextCycle 9s linear infinite;
+    }
+    .chunk-file-link:hover {
+      text-decoration: underline;
+    }
+    .chunk-score-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .score-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #047857;
+      background: rgba(16, 185, 129, 0.1);
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .chunk-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.75rem;
+      color: var(--text-sub);
+    }
+    .chunk-meta-item strong {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+    .chunk-score-bar-bg {
+      width: 100%;
+      height: 3px;
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 10px;
+      margin-top: 0.75rem;
+      overflow: hidden;
+    }
+    .chunk-score-bar-fill {
+      height: 100%;
+      animation: rgbBgCycle 9s linear infinite;
+      border-radius: 10px;
+    }
+
+    /* Logs Console */
+    .log-console-wrap {
+      margin-top: 1rem;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      animation: slideDown 0.25s ease-out;
+    }
+    .log-console-body::-webkit-scrollbar {
+      width: 6px;
+    }
+    .log-console-body::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    .log-console-body::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+    .log-console-body::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Spinner */
     .spinner {
-      display: inline-block; width: 18px; height: 18px;
-      border: 2px solid #30363d; border-top-color: #58a6ff;
-      border-radius: 50%; animation: spin 0.7s linear infinite;
-      vertical-align: middle; margin-right: 8px;
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .hidden { display: none; }
 
-    .error-box {
-      background: #3d1c1c; border: 1px solid #f85149;
-      border-radius: 8px; padding: 1rem; color: #f85149; font-size: 0.9rem;
+    /* Alert Boxes */
+    .alert-wrap {
+      margin-top: 1rem;
+      animation: slideDown 0.25s ease-out;
     }
-    .success-box {
-      background: #1a2d1a; border: 1px solid #2ea043;
-      border-radius: 8px; padding: 1rem; color: #3fb950; font-size: 0.9rem;
+    .success-alert {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: #065f46;
+      border-radius: 10px;
+      padding: 1rem;
+      font-size: 0.82rem;
+      line-height: 1.5;
     }
-    .badge {
-      display: inline-block; padding: 2px 8px; border-radius: 20px;
-      font-size: 0.72rem; font-weight: 600; background: #1f2d3d;
-      color: #58a6ff; border: 1px solid #1d4b6e; margin-left: 8px;
+    .error-alert {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      color: #991b1b;
+      border-radius: 10px;
+      padding: 1rem;
+      font-size: 0.82rem;
     }
-    .hint { font-size: 0.78rem; color: #8b949e; margin-top: 0.4rem; }
+    .hidden {
+      display: none !important;
+    }
+
+    /* Mobile Tabs Elements */
+    .mobile-tabs-container {
+      display: none;
+    }
+    .tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.03);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      padding: 0.3rem;
+      border-radius: 12px;
+      gap: 0.25rem;
+    }
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-sub);
+      padding: 0.6rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      transition: background 0.2s, color 0.2s;
+    }
+    .tab-btn.active {
+      color: #fff;
+      animation: rgbBgCycle 9s linear infinite;
+    }
+
+    /* Standard Animation Definitions for RGB Cycle */
+    @keyframes rgbTextCycle {
+      0% { color: #ef4444; }
+      33% { color: #10b981; }
+      66% { color: #3b82f6; }
+      100% { color: #ef4444; }
+    }
+    @keyframes rgbBgCycle {
+      0% { background: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); }
+      33% { background: #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); }
+      66% { background: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25); }
+      100% { background: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); }
+    }
+    @keyframes rgbBorderCycle {
+      0% { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+      33% { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
+      66% { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+      100% { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+    }
+
+    /* Responsive design adjustments */
+    @media (max-width: 992px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      .mobile-tabs-container {
+        display: block;
+        margin-bottom: 1.5rem;
+      }
+      
+      /* In the Query Tab, we want to show:
+         1. Target Codebase card (so mobile users can edit url/top_k).
+         2. All elements inside the main-column.
+         We hide the Index card. */
+      body.tab-query #targetCodebaseCard {
+        display: block !important;
+      }
+      body.tab-query #indexCodebaseCard {
+        display: none !important;
+      }
+      body.tab-query .sidebar-column {
+        display: block !important;
+      }
+      body.tab-query .main-column {
+        display: block !important;
+      }
+      
+      /* In the Index Tab, we want to show:
+         1. Index New Codebase card.
+         We hide the Target Codebase card and the main Q&A column. */
+      body.tab-index #targetCodebaseCard {
+        display: none !important;
+      }
+      body.tab-index #indexCodebaseCard {
+        display: block !important;
+      }
+      body.tab-index .sidebar-column {
+        display: block !important;
+      }
+      body.tab-index .main-column {
+        display: none !important;
+      }
+    }
+    @media (max-width: 600px) {
+      .app-container {
+        padding: 1rem 0.75rem;
+      }
+      .glass-card {
+        padding: 1rem !important;
+        border-radius: 12px;
+      }
+      .answer-card-outer {
+        padding: 1.25rem 1rem !important;
+      }
+      .sources-card-outer {
+        padding: 1.25rem 1rem !important;
+      }
+      .app-header {
+        flex-direction: column;
+        align-items: stretch;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+      }
+      .health-status-bar {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        border-radius: 12px;
+        gap: 0.4rem;
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.7rem !important;
+      }
+      .model-tags {
+        flex-wrap: wrap;
+        width: 100%;
+      }
+      .model-tag-item {
+        border-left: none;
+        border-right: 1px solid rgba(0, 0, 0, 0.08);
+        padding-left: 0;
+        padding-right: 0.5rem;
+        margin-right: 0.25rem;
+        font-size: 0.7rem;
+      }
+      .model-tag-item:last-child {
+        border-right: none;
+      }
+      .metrics-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 0.5rem !important;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+      }
+      .metric-card {
+        padding: 0.5rem 0.25rem !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        gap: 0.25rem !important;
+        border-radius: 10px;
+      }
+      .metric-icon {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 1rem !important;
+      }
+      .metric-value {
+        font-size: 0.8rem !important;
+      }
+      .metric-label {
+        font-size: 0.55rem !important;
+      }
+      .answer-body-content pre code {
+        font-size: 0.8rem !important;
+      }
+      .example-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+      }
+      .example-item {
+        padding: 0.75rem 1rem;
+      }
+    }
   </style>
 </head>
-<body>
-<div class="container">
-
-  <header>
-    <div>
-      <h1>🔍 CodeLens <span class="badge">v1.0</span></h1>
-      <p>AI-powered codebase Q&A — powered by Gemini + pgvector</p>
-    </div>
-  </header>
-
-  <!-- Tabs -->
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab('query')">💬 Ask Question</div>
-    <div class="tab" onclick="switchTab('index')">📥 Index Repository</div>
+<body class="tab-query">
+  <!-- Aurora Background Glows -->
+  <div class="aurora-bg">
+    <div class="aurora-1"></div>
+    <div class="aurora-2"></div>
   </div>
 
-  <!-- Query Tab -->
-  <div id="tab-query" class="tab-content active">
-    <div class="card">
-      <div style="margin-bottom:1rem;">
-        <label>GitHub Repository URL</label>
-        <input id="repoUrl" type="text"
-          placeholder="https://github.com/pallets/itsdangerous"
-          value="https://github.com/pallets/itsdangerous" />
-        <p class="hint">Must be indexed first using the "Index Repository" tab</p>
-      </div>
-      <div>
-        <label>Your Question</label>
-        <textarea id="question"
-          placeholder="How does token signing work?">How does signing work?</textarea>
-      </div>
-      <div class="row" style="margin-top:1rem;">
-        <div>
-          <label>Top K chunks</label>
-          <input id="topK" type="number" value="5" min="1" max="20" />
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <svg class="logo-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <line x1="15.5" y1="15.5" x2="20" y2="20" />
+          <path d="M8 8.5 L6 10.5 L8 12.5" stroke-width="2" />
+          <path d="M13 8.5 L15 10.5 L13 12.5" stroke-width="2" />
+        </svg>
+        <div class="title-wrap">
+          <h1>CodeLens</h1>
+          <p>Semantic RAG Search for GitHub Repositories</p>
         </div>
-        <div style="display:flex;align-items:flex-end;">
-          <button id="askBtn" onclick="askQuestion()">Ask CodeLens</button>
+      </div>
+      
+      <!-- System Health Bar -->
+      <div class="health-status-bar">
+        <div class="status-indicator">
+          <span class="status-dot online" id="system-status-dot"></span>
+          <span id="system-status-text">System Online</span>
         </div>
+        <div class="model-tags">
+          <span class="model-tag-item">LLM: <strong id="llm-badge">Gemini-3.1-Flash</strong></span>
+          <span class="model-tag-item">Embed: <strong id="embed-badge">Gemini-Embedding-2</strong></span>
+          <span class="model-tag-item">Rerank: <strong id="rerank-badge">Rerank-v4</strong></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mobile Tabs Navigation -->
+    <div class="mobile-tabs-container">
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-btn-query" onclick="switchTab('query')">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+          Ask CodeLens
+        </button>
+        <button class="tab-btn" id="tab-btn-index" onclick="switchTab('index')">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+          Index Repo
+        </button>
       </div>
     </div>
 
-    <div class="card hidden" id="metricsCard">
-      <div class="metrics">
-        <div class="metric">
-          <span class="metric-val" id="mLatency">—</span>
-          <span class="metric-lbl">Latency</span>
-        </div>
-        <div class="metric">
-          <span class="metric-val" id="mTokens">—</span>
-          <span class="metric-lbl">Tokens</span>
-        </div>
-        <div class="metric">
-          <span class="metric-val" id="mChunks">—</span>
-          <span class="metric-lbl">Chunks</span>
-        </div>
-      </div>
-    </div>
+    <!-- Dashboard Grid -->
+    <div class="dashboard-grid">
+      
+      <!-- Sidebar Panel (Controls, Ingestion) -->
+      <aside class="sidebar-column">
+        
+        <!-- Repo Selection & Config -->
+        <div class="glass-card" id="targetCodebaseCard">
+          <div class="card-header">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+            <h2>Target Codebase</h2>
+          </div>
+          
+          <div class="form-group">
+            <label for="repoUrl">GitHub Repo URL</label>
+            <div class="input-with-icon">
+              <svg class="input-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.193 22 16.44 22 12.017 22 6.484 17.522 2 12 2z"/></svg>
+              <input id="repoUrl" type="text"
+                placeholder="https://github.com/owner/repo"
+                value="https://github.com/pallets/itsdangerous" />
+            </div>
+            <p class="field-hint">We will search semantic chunks indexed for this repository</p>
+          </div>
 
-    <div class="card hidden" id="answerCard">
-      <label>Answer</label>
-      <div class="answer-box" id="answerBox"></div>
-    </div>
+          <div class="form-group">
+            <div class="slider-header">
+              <label for="topK">RAG Context Count (Top K)</label>
+              <span id="topKVal" class="slider-badge">5</span>
+            </div>
+            <input id="topK" class="slider" type="range" value="5" min="1" max="20" step="1" oninput="document.getElementById('topKVal').textContent = this.value" />
+            <p class="field-hint">Number of semantic code chunks to retrieve for analysis</p>
+          </div>
+        </div>
 
-    <div class="card hidden" id="sourcesCard">
-      <label>Sources</label>
-      <ul class="sources-list" id="sourcesList"></ul>
-    </div>
+        <!-- Index New Repository -->
+        <div class="glass-card" id="indexCodebaseCard">
+          <div class="card-header">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/></svg>
+            <h2>Index New Codebase</h2>
+          </div>
+          
+          <div class="form-group">
+            <label for="indexRepoUrl">GitHub Repo URL</label>
+            <div class="input-with-icon">
+              <svg class="input-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.193 22 16.44 22 12.017 22 6.484 17.522 2 12 2z"/></svg>
+              <input id="indexRepoUrl" type="text"
+                placeholder="https://github.com/pallets/click" />
+            </div>
+            <p class="field-hint">Public GitHub repositories only</p>
+          </div>
 
-    <div class="hidden" id="queryErrorCard">
-      <div class="error-box" id="queryErrorBox"></div>
+          <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+            <button class="primary-btn secondary-color" id="indexBtn" onclick="indexRepo()" style="flex: 1;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+              <span>Index Repository</span>
+            </button>
+            <button class="action-btn-pill hidden" id="cancelIndexBtn" onclick="cancelIndex()" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #dc2626; border-radius: 10px; width: 44px; display: flex; align-items: center; justify-content: center; padding: 0;" title="Cancel Indexing">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+            </button>
+          </div>
+
+          <!-- Logs Console -->
+          <div class="log-console-wrap hidden" id="logConsoleCard" style="margin-top: 1rem;">
+            <div class="log-console-header" style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 0.3rem 0.6rem; border-top-left-radius: 8px; border-top-right-radius: 8px; font-size: 0.7rem; color: #94a3b8; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: monospace;">
+              <span>INDEXER LOGS</span>
+              <span class="pulse-indicator" id="consolePulse" style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+            </div>
+            <div class="log-console-body" id="logConsoleBody" style="background: #1e293b; padding: 0.75rem; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #f1f5f9; height: 160px; overflow-y: auto; white-space: pre-wrap; line-height: 1.4; border: 1px solid rgba(0, 0, 0, 0.08); border-top: none; scrollbar-width: thin;">
+            </div>
+          </div>
+          
+          <!-- Ingestion Alerts -->
+          <div class="alert-wrap hidden" id="indexSuccessCard">
+            <div class="success-alert" id="indexSuccessBox"></div>
+          </div>
+          <div class="alert-wrap hidden" id="indexErrorCard">
+            <div class="error-alert" id="indexErrorBox"></div>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- Main Panel (Chat Q&A Workspace) -->
+      <main class="main-column">
+        
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="glass-card welcome-card">
+          <div class="glow-symbol">✨</div>
+          <h2>Semantic Code Explorer</h2>
+          <p class="welcome-tag">Ask structural or functional questions about the target codebase and get precise explanations backed by source files.</p>
+          
+          <div class="example-grid-title">💡 Try these example queries:</div>
+          <div class="example-grid">
+            <div class="example-item" onclick="useExample('How does signing work?')">
+              <h3>🔑 Token Signing</h3>
+              <p>"How does signing work?"</p>
+            </div>
+            <div class="example-item" onclick="useExample('Where are the routes and endpoints defined?')">
+              <h3>🌐 Routes & Endpoints</h3>
+              <p>"Where are routes defined?"</p>
+            </div>
+            <div class="example-item" onclick="useExample('Explain the project structure and primary files')">
+              <h3>📂 Architecture Layout</h3>
+              <p>"Explain the project structure"</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Query Input Card -->
+        <div class="glass-card query-box-card">
+          <div class="form-group">
+            <div class="label-row">
+              <label for="question">Ask a question about the repository</label>
+              <span class="ctrl-enter-tag">Ctrl + Enter to search</span>
+            </div>
+            <div class="textarea-wrap">
+              <textarea id="question" placeholder="Ask about algorithms, configuration, database models or API structures..."></textarea>
+              <button id="askBtn" class="ask-submit-btn" onclick="askQuestion()" title="Ask CodeLens">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="alert-wrap hidden" id="queryErrorCard">
+            <div class="error-alert" id="queryErrorBox"></div>
+          </div>
+        </div>
+
+        <!-- Skeleton Loader (Hidden by default) -->
+        <div class="glass-card skeleton-card hidden" id="skeletonLoader">
+          <div class="skeleton-header">
+            <div class="skeleton-line title"></div>
+            <div class="skeleton-line badge-line"></div>
+          </div>
+          <div class="skeleton-body">
+            <div class="skeleton-line p1"></div>
+            <div class="skeleton-line p2"></div>
+            <div class="skeleton-line p3"></div>
+            <div class="skeleton-line code"></div>
+            <div class="skeleton-line p4"></div>
+          </div>
+        </div>
+
+        <!-- Answer / Results Card (Hidden by default) -->
+        <div class="glass-card answer-card-outer hidden" id="answerCard">
+          <div class="answer-card-header">
+            <div class="header-left">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>
+              <h2>Analysis & Answer</h2>
+            </div>
+            <button class="action-btn-pill" onclick="copyFullAnswer()">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+              <span>Copy Answer</span>
+            </button>
+          </div>
+          
+          <div class="answer-body-content" id="answerBox"></div>
+        </div>
+
+        <!-- Metrics Display (Hidden by default) -->
+        <div class="metrics-grid hidden" id="metricsCard">
+          <div class="metric-card">
+            <div class="metric-icon latency">⏱️</div>
+            <div class="metric-details">
+              <span class="metric-value" id="mLatency">—</span>
+              <span class="metric-label">Latency</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon tokens">⚡</div>
+            <div class="metric-details">
+              <span class="metric-value" id="mTokens">—</span>
+              <span class="metric-label">Tokens Analyzed</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon chunks">📦</div>
+            <div class="metric-details">
+              <span class="metric-value" id="mChunks">—</span>
+              <span class="metric-label">RAG Chunks</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sources / Retrieved Chunks (Hidden by default) -->
+        <div class="glass-card sources-card-outer hidden" id="sourcesCard">
+          <div class="card-header">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            <h2>Retrieved Context Chunks</h2>
+          </div>
+          
+          <div class="chunks-list" id="chunksContainer">
+            <!-- Dynamically populated chunk cards -->
+          </div>
+        </div>
+
+      </main>
     </div>
   </div>
 
-  <!-- Index Tab -->
-  <div id="tab-index" class="tab-content">
-    <div class="card">
-      <div style="margin-bottom:1rem;">
-        <label>GitHub Repository URL</label>
-        <input id="indexRepoUrl" type="text"
-          placeholder="https://github.com/pallets/click" />
-        <p class="hint">Public GitHub repos only. Indexing takes 2-10 minutes depending on repo size.</p>
-      </div>
-      <button class="secondary" id="indexBtn" onclick="indexRepo()">
-        📥 Index Repository
-      </button>
-    </div>
-
-    <div class="hidden" id="indexSuccessCard">
-      <div class="success-box" id="indexSuccessBox"></div>
-    </div>
-    <div class="hidden" id="indexErrorCard">
-      <div class="error-box" id="indexErrorBox"></div>
-    </div>
-  </div>
-
-</div>
-
-<script>
-  function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach((t, i) => {
-      t.classList.toggle('active', ['query','index'][i] === tab);
+  <script>
+    // Health check on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      checkSystemHealth();
+      window.addEventListener('resize', handleResize);
+      handleResize();
     });
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById('tab-' + tab).classList.add('active');
-  }
 
-  async function askQuestion() {
-    const btn      = document.getElementById('askBtn');
-    const repoUrl  = document.getElementById('repoUrl').value.trim();
-    const question = document.getElementById('question').value.trim();
-    const topK     = parseInt(document.getElementById('topK').value) || 5;
-
-    if (!repoUrl || !question) {
-      alert('Please fill in both the repo URL and your question.');
-      return;
+    function handleResize() {
+      if (window.innerWidth > 992) {
+        document.body.className = '';
+      } else if (!document.body.className) {
+        document.body.className = 'tab-query';
+      }
     }
 
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Thinking...';
-    ['metricsCard','answerCard','sourcesCard','queryErrorCard'].forEach(id => {
-      document.getElementById(id).classList.add('hidden');
-    });
+    async function checkSystemHealth() {
+      try {
+        const res = await fetch('/api/v1/health');
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('system-status-dot').className = 'status-dot online';
+          document.getElementById('system-status-text').textContent = 'System Online';
+          if (data.models) {
+            if (data.models.llm) document.getElementById('llm-badge').textContent = data.models.llm;
+            if (data.models.embedding) document.getElementById('embed-badge').textContent = data.models.embedding;
+            if (data.models.reranker) document.getElementById('rerank-badge').textContent = data.models.reranker;
+          }
+        }
+      } catch (err) {
+        console.error('System health check failed:', err);
+      }
+    }
 
-    try {
-      const res = await fetch('/api/v1/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, repo_url: repoUrl, top_k: topK })
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
       });
+      document.getElementById('tab-btn-' + tab).classList.add('active');
+      document.body.className = 'tab-' + tab;
+    }
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'API error');
+    function useExample(text) {
+      const textarea = document.getElementById('question');
+      textarea.value = text;
+      textarea.focus();
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+
+    function formatMarkdown(text) {
+      if (!text) return '';
+      let escaped = escapeHTML(text);
+      
+      // 1. Code blocks: ```lang\n...\n```
+      escaped = escaped.replace(/```(\w*)\n([\s\S]*?)\n```/g, (match, lang, code) => {
+        const displayLang = lang || 'code';
+        return `
+          <div class="code-block-container">
+            <div class="code-block-header">
+              <span class="code-block-lang">${displayLang}</span>
+              <button class="copy-code-btn" onclick="copyCode(this)">
+                <svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                <span>Copy</span>
+              </button>
+            </div>
+            <pre><code class="language-${displayLang}">${code.trim()}</code></pre>
+          </div>
+        `;
+      });
+      
+      // 2. Inline code: `code`
+      escaped = escaped.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>');
+      
+      // 3. Bold: **text**
+      escaped = escaped.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
+      
+      // 4. Paragraphs and bullet lists
+      const lines = escaped.split('\n');
+      let inList = false;
+      const processedLines = [];
+      
+      for (let line of lines) {
+        const listMatch = line.match(/^\s*[\*\-]\s+(.+)$/);
+        if (listMatch) {
+          if (!inList) {
+            inList = true;
+            processedLines.push('<ul>');
+          }
+          processedLines.push(`<li>${listMatch[1]}</li>`);
+        } else {
+          if (inList) {
+            inList = false;
+            processedLines.push('</ul>');
+          }
+          const trimmed = line.trim();
+          if (trimmed) {
+            if (trimmed.startsWith('<div class="code-block-container"') || trimmed.startsWith('</div>') || trimmed.startsWith('<ul>') || trimmed.startsWith('</ul>') || trimmed.startsWith('<li>')) {
+              processedLines.push(line);
+            } else {
+              processedLines.push(`<p>${line}</p>`);
+            }
+          }
+        }
+      }
+      
+      if (inList) {
+        processedLines.push('</ul>');
+      }
+      
+      return processedLines.join('\n');
+    }
+
+    function copyCode(btn) {
+      const code = btn.closest('.code-block-container').querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        const span = btn.querySelector('span');
+        const originalText = span.textContent;
+        span.textContent = 'Copied!';
+        btn.style.color = '#10b981';
+        setTimeout(() => {
+          span.textContent = originalText;
+          btn.style.color = '';
+        }, 2000);
+      });
+    }
+
+    function copyFullAnswer() {
+      const el = document.getElementById('answerBox');
+      const text = el.innerText || el.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.action-btn-pill');
+        const span = btn.querySelector('span');
+        const originalText = span.textContent;
+        span.textContent = 'Copied!';
+        btn.style.borderColor = '#10b981';
+        setTimeout(() => {
+          span.textContent = originalText;
+          btn.style.borderColor = '';
+        }, 2000);
+      });
+    }
+
+    function makeGithubLink(repoUrl, filePath, startLine, endLine) {
+      let base = repoUrl.replace(/\/$/, '');
+      return `${base}/blob/main/${filePath}#L${startLine}-L${endLine}`;
+    }
+
+    async function askQuestion() {
+      const btn = document.getElementById('askBtn');
+      const repoUrl = document.getElementById('repoUrl').value.trim();
+      const question = document.getElementById('question').value.trim();
+      const topK = parseInt(document.getElementById('topK').value) || 5;
+
+      if (!repoUrl || !question) {
+        alert('Please fill in both the repository URL and your question.');
+        return;
       }
 
-      const data = await res.json();
+      btn.disabled = true;
+      const originalBtnHTML = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner"></span>';
 
-      document.getElementById('mLatency').textContent =
-        data.latency_ms > 1000
-          ? (data.latency_ms / 1000).toFixed(1) + 's'
-          : data.latency_ms + 'ms';
-      document.getElementById('mTokens').textContent  = data.tokens;
-      document.getElementById('mChunks').textContent  = data.chunks.length;
-      document.getElementById('metricsCard').classList.remove('hidden');
+      document.getElementById('welcomeScreen').classList.add('hidden');
+      document.getElementById('answerCard').classList.add('hidden');
+      document.getElementById('metricsCard').classList.add('hidden');
+      document.getElementById('sourcesCard').classList.add('hidden');
+      document.getElementById('queryErrorCard').classList.add('hidden');
+      document.getElementById('skeletonLoader').classList.remove('hidden');
 
-      document.getElementById('answerBox').innerHTML =
-        data.answer
-          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\n/g, '<br>');
-      document.getElementById('answerCard').classList.remove('hidden');
+      try {
+        const res = await fetch('/api/v1/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question, repo_url: repoUrl, top_k: topK })
+        });
 
-      const list = document.getElementById('sourcesList');
-      list.innerHTML = '';
-      data.sources.forEach(src => {
-        const li = document.createElement('li');
-        li.textContent = src;
-        list.appendChild(li);
-      });
-      document.getElementById('sourcesCard').classList.remove('hidden');
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'API error processing query');
+        }
 
-    } catch (err) {
-      document.getElementById('queryErrorBox').textContent = '❌ ' + err.message;
-      document.getElementById('queryErrorCard').classList.remove('hidden');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = 'Ask CodeLens';
+        const data = await res.json();
+
+        document.getElementById('answerBox').innerHTML = formatMarkdown(data.answer);
+        document.getElementById('answerCard').classList.remove('hidden');
+
+        const latencySec = (data.latency_ms / 1000).toFixed(2);
+        document.getElementById('mLatency').textContent = `${latencySec}s`;
+        document.getElementById('mTokens').textContent = data.tokens.toLocaleString();
+        document.getElementById('mChunks').textContent = data.chunks ? data.chunks.length : 0;
+        document.getElementById('metricsCard').classList.remove('hidden');
+
+        const container = document.getElementById('chunksContainer');
+        container.innerHTML = '';
+        
+        if (data.chunks && data.chunks.length > 0) {
+          data.chunks.forEach(chunk => {
+            const scorePercent = chunk.rerank_score ? Math.round(chunk.rerank_score * 100) : 0;
+            const githubLink = makeGithubLink(repoUrl, chunk.file_path, chunk.start_line, chunk.end_line);
+            
+            const card = document.createElement('div');
+            card.className = 'chunk-card';
+            card.innerHTML = `
+              <div class="chunk-card-header">
+                <a class="chunk-file-link" href="${githubLink}" target="_blank" title="View source on GitHub">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.193 22 16.44 22 12.017 22 6.484 17.522 2 12 2z"/></svg>
+                  <span>${chunk.file_path}</span>
+                </a>
+                <div class="chunk-score-wrap">
+                  ${chunk.rerank_score ? `<span class="score-badge">Match: ${scorePercent}%</span>` : ''}
+                </div>
+              </div>
+              <div class="chunk-meta">
+                <div class="chunk-meta-item">Lines: <strong>${chunk.start_line} - ${chunk.end_line}</strong></div>
+                ${chunk.function_name ? `<div class="chunk-meta-item">Function: <code>${chunk.function_name}</code></div>` : ''}
+              </div>
+              <div class="chunk-score-bar-bg">
+                <div class="chunk-score-bar-fill" style="width: ${scorePercent}%"></div>
+              </div>
+            `;
+            container.appendChild(card);
+          });
+          document.getElementById('sourcesCard').classList.remove('hidden');
+        }
+
+      } catch (err) {
+        document.getElementById('queryErrorBox').textContent = err.message;
+        document.getElementById('queryErrorCard').classList.remove('hidden');
+      } finally {
+        document.getElementById('skeletonLoader').classList.add('hidden');
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHTML;
+      }
     }
-  }
 
-  async function indexRepo() {
-    const btn     = document.getElementById('indexBtn');
-    const repoUrl = document.getElementById('indexRepoUrl').value.trim();
+    let logPollInterval = null;
+    let currentPollingRepo = "";
 
-    if (!repoUrl) {
-      alert('Please enter a GitHub repository URL.');
-      return;
-    }
+    async function indexRepo() {
+      const btn = document.getElementById('indexBtn');
+      const cancelBtn = document.getElementById('cancelIndexBtn');
+      const logConsoleCard = document.getElementById('logConsoleCard');
+      const logConsoleBody = document.getElementById('logConsoleBody');
+      const consolePulse = document.getElementById('consolePulse');
+      const repoUrl = document.getElementById('indexRepoUrl').value.trim();
 
-    if (!repoUrl.startsWith('https://github.com/')) {
-      alert('Please enter a valid GitHub URL (https://github.com/...)');
-      return;
-    }
-
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Starting indexing...';
-    ['indexSuccessCard','indexErrorCard'].forEach(id => {
-      document.getElementById(id).classList.add('hidden');
-    });
-
-    try {
-      const res = await fetch('/api/v1/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repo_url: repoUrl, repo_path: '' })
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'API error');
+      if (!repoUrl) {
+        alert('Please enter a GitHub repository URL.');
+        return;
       }
 
-      const data = await res.json();
-      document.getElementById('indexSuccessBox').innerHTML =
-        `✅ <strong>Indexing started!</strong><br><br>` +
-        `Repo: ${repoUrl}<br>` +
-        `Status: ${data.status}<br><br>` +
-        `⏱️ This runs in the background. Wait 2-5 minutes then switch to the ` +
-        `"Ask Question" tab and use this repo URL to query.`;
-      document.getElementById('indexSuccessCard').classList.remove('hidden');
+      if (!repoUrl.startsWith('https://github.com/')) {
+        alert('Please enter a valid GitHub URL (https://github.com/...)');
+        return;
+      }
 
-    } catch (err) {
-      document.getElementById('indexErrorBox').textContent = '❌ ' + err.message;
-      document.getElementById('indexErrorCard').classList.remove('hidden');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = '📥 Index Repository';
+      btn.disabled = true;
+      const originalBtnHTML = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner"></span> <span>Indexing...</span>';
+      
+      logConsoleBody.innerHTML = "📡 Initializing connection to ingestion pipeline...\n";
+      logConsoleCard.classList.remove('hidden');
+      cancelBtn.classList.remove('hidden');
+      consolePulse.style.background = "#eab308"; 
+
+      document.getElementById('indexSuccessCard').classList.add('hidden');
+      document.getElementById('indexErrorCard').classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/v1/ingest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repo_url: repoUrl, repo_path: '' })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'API error starting ingestion');
+        }
+
+        currentPollingRepo = repoUrl;
+        startPollingLogs(repoUrl, originalBtnHTML);
+
+      } catch (err) {
+        logConsoleBody.innerHTML += `❌ Error starting ingestion: ${err.message}\n`;
+        document.getElementById('indexErrorBox').textContent = err.message;
+        document.getElementById('indexErrorCard').classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHTML;
+        cancelBtn.classList.add('hidden');
+        consolePulse.style.background = "#ef4444"; 
+      }
     }
-  }
 
-  document.getElementById('question').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && e.ctrlKey) askQuestion();
-  });
-</script>
+    function startPollingLogs(repoUrl, originalBtnHTML) {
+      if (logPollInterval) clearInterval(logPollInterval);
+      
+      const logConsoleBody = document.getElementById('logConsoleBody');
+      const consolePulse = document.getElementById('consolePulse');
+      const cancelBtn = document.getElementById('cancelIndexBtn');
+      const btn = document.getElementById('indexBtn');
+      
+      consolePulse.style.background = "#22c55e"; 
+
+      let lastLogsLength = 0;
+
+      logPollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/v1/ingest/logs?repo_url=${encodeURIComponent(repoUrl)}`);
+          if (!res.ok) return;
+
+          const data = await res.json();
+          const logs = data.logs || [];
+          const status = data.status || "processing";
+
+          if (logs.length > lastLogsLength) {
+            for (let i = lastLogsLength; i < logs.length; i++) {
+              logConsoleBody.innerHTML += `${logs[i]}\n`;
+            }
+            lastLogsLength = logs.length;
+            logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
+          }
+
+          if (status === "completed") {
+            clearInterval(logPollInterval);
+            logConsoleBody.innerHTML += `\n✅ INDEXING COMPLETED SUCCESSFULLY!\n`;
+            logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
+            
+            document.getElementById('indexSuccessBox').innerHTML = `
+              <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                Repository Indexing Completed
+              </div>
+              <p style="margin-bottom: 0.5rem;">Repository: <strong>${repoUrl}</strong></p>
+              <p>Your codebase is fully indexed and ready for Q&A search.</p>
+            `;
+            document.getElementById('indexSuccessCard').classList.remove('hidden');
+            
+            document.getElementById('repoUrl').value = repoUrl;
+            
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHTML;
+            cancelBtn.classList.add('hidden');
+            consolePulse.style.background = "#22c55e";
+          } else if (status === "cancelled") {
+            clearInterval(logPollInterval);
+            logConsoleBody.innerHTML += `\n❌ INDEXING CANCELLED BY USER!\n`;
+            logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
+            
+            document.getElementById('indexErrorBox').textContent = "Indexing cancelled by user.";
+            document.getElementById('indexErrorCard').classList.remove('hidden');
+            
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHTML;
+            cancelBtn.classList.add('hidden');
+            consolePulse.style.background = "#ef4444";
+          } else if (status === "failed") {
+            clearInterval(logPollInterval);
+            logConsoleBody.innerHTML += `\n❌ INDEXING FAILED!\n`;
+            logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
+            
+            document.getElementById('indexErrorBox').textContent = "Indexing failed. See console logs for details.";
+            document.getElementById('indexErrorCard').classList.remove('hidden');
+            
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHTML;
+            cancelBtn.classList.add('hidden');
+            consolePulse.style.background = "#ef4444";
+          }
+        } catch (err) {
+          console.error("Error polling logs:", err);
+        }
+      }, 2000);
+    }
+
+    async function cancelIndex() {
+      if (!currentPollingRepo) return;
+      const cancelBtn = document.getElementById('cancelIndexBtn');
+      const logConsoleBody = document.getElementById('logConsoleBody');
+      const consolePulse = document.getElementById('consolePulse');
+      
+      cancelBtn.disabled = true;
+      logConsoleBody.innerHTML += "\n🛑 Requesting cancellation from backend...\n";
+      logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
+      consolePulse.style.background = "#eab308"; 
+      
+      try {
+        await fetch(`/api/v1/ingest/cancel?repo_url=${encodeURIComponent(currentPollingRepo)}`, {
+          method: 'POST'
+        });
+      } catch (err) {
+        console.error("Error cancelling index:", err);
+        cancelBtn.disabled = false;
+      }
+    }
+
+    document.getElementById('question').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.ctrlKey) {
+        e.preventDefault();
+        askQuestion();
+      }
+    });
+
+    const tx = document.getElementById('question');
+    tx.addEventListener("input", function() {
+      this.style.height = "auto";
+      this.style.height = (this.scrollHeight) + "px";
+    }, false);
+  </script>
 </body>
 </html>

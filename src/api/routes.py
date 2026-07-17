@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from datetime import datetime
 from src.api.models import (
     IngestRequest, IngestResponse,
@@ -38,12 +38,34 @@ def ingest(request: IngestRequest, background_tasks: BackgroundTasks):
             background_tasks.add_task(clone_and_index, request.repo_url)
 
         return IngestResponse(
-            message="Indexing started — this takes a few minutes for large repos",
+            message="Indexing started — check logs for progress",
             repo_url=request.repo_url,
             status="processing",
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/ingest/logs")
+def get_ingest_logs(repo_url: str):
+    """
+    Get the real-time logs and status of an active ingestion task.
+    """
+    from src.ingestion.indexer import task_manager
+    info = task_manager.get_task_info(repo_url)
+    if not info:
+        return {"status": "not_started", "logs": ["No active indexing task found for this repository."]}
+    return info
+
+
+@router.post("/ingest/cancel")
+def cancel_ingest(repo_url: str):
+    """
+    Cancel an active ingestion task.
+    """
+    from src.ingestion.indexer import task_manager
+    task_manager.cancel_task(repo_url)
+    return {"message": "Cancellation request submitted", "repo_url": repo_url}
 
 
 @router.post("/query", response_model=QueryResponse)
