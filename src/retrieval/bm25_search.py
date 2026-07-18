@@ -1,5 +1,4 @@
-﻿import os
-from rank_bm25 import BM25Okapi
+import os
 from supabase import create_client
 from dotenv import load_dotenv
 
@@ -11,34 +10,40 @@ supabase = create_client(
 )
 
 
-def tokenize(text: str) -> list[str]:
-    return text.lower().split()
-
-
 def bm25_search(
     query:    str,
     repo_url: str,
     top_k:    int = 15,
 ) -> list[dict]:
-    result = (
-        supabase.table("chunks")
-        .select("id, file_path, function_name, language, start_line, end_line, content, summary")
-        .eq("repo_url", repo_url)
-        .execute()
-    )
-    chunks = result.data or []
-    if not chunks:
+    """
+    Perform a database-backed Full-Text Search (FTS) in Supabase.
+    This replaces the in-memory BM25 search to avoid downloading all chunks.
+    """
+    if not query.strip():
         return []
 
-    corpus = [
-        tokenize(f"{c['function_name']} {c.get('summary', '')} {c['content']}")
-        for c in chunks
-    ]
-    bm25   = BM25Okapi(corpus)
-    scores = bm25.get_scores(tokenize(query))
+    # Clean query and wrap in double quotes to avoid PostgREST parsing errors (like commas)
+    clean_query = query.replace('"', '')
+    escaped_query = f'"{clean_query}"'
 
-    for i, chunk in enumerate(chunks):
-        chunk["bm25_score"] = float(scores[i])
+    try:
+        # Match across content, function_name, and summary using OR conditions
+        res = (
+            supabase.table("chunks")
+            .select("id, file_path, function_name, language, start_line, end_line, content, summary")
+            .eq("repo_url", repo_url)
+            .or_(f"content.wfts.{escaped_query},function_name.wfts.{escaped_query},summary.wfts.{escaped_query}")
+            .limit(top_k)
+            .execute()
+        )
+        chunks = res.data or []
+        
+        # Populate a dummy bm25_score for backward compatibility
+        for i, chunk in enumerate(chunks):
+            chunk["bm25_score"] = float(len(chunks) - i)
+            
+        return chunks
+    except Exception as e:
+        print(f"  ⚠️ Supabase FTS failed: {e}")
+        return []
 
-    ranked = sorted(chunks, key=lambda x: x["bm25_score"], reverse=True)
-    return ranked[:top_k]

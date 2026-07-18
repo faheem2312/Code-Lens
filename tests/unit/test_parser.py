@@ -1,0 +1,24 @@
+import os
+from src.ingestion.parser import extract_functions
+
+def test_extract_functions_python():
+    # Test on a known local python file (e.g., src/gemini_client.py)
+    file_path = os.path.join("src", "gemini_client.py")
+    chunks = extract_functions(file_path)
+    
+    assert isinstance(chunks, list)
+    assert len(chunks) > 0
+    for chunk in chunks:
+        assert "file_path" in chunk
+        assert "function_name" in chunk
+        assert "language" in chunk
+        assert "start_line" in chunk
+        assert "end_line" in chunk
+        assert "content" in chunk
+        assert chunk["language"] == "py"
+        assert chunk["function_name"] != "anonymous"
+
+def test_extract_functions_unsupported_file():
+    # Test on an unsupported file type
+    chunks = extract_functions("requirements.txt")
+    assert chunks == []

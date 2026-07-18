@@ -1,8 +1,8 @@
-﻿import re
+import re
 
 INJECTION_PATTERNS = [
-    r"ignore (all |previous |above )?instructions",
-    r"disregard (the |your |all )?instructions",
+    r"ignore (all |previous |above |system )*instructions",
+    r"disregard (the |your |all |previous )*instructions",
     r"you are now", r"new persona", r"act as",
     r"forget everything", r"system prompt", r"jailbreak",
     r"pretend (you are|to be)", r"do anything now",

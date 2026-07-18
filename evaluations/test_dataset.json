@@ -1,0 +1,14 @@
+[
+  {
+    "question": "How does token signing work in itsdangerous?",
+    "ground_truth": "Signing works by appending a separator and a signature to the input value. The Signer.sign function converts the input to bytes and appends the separator and the result of Signer.get_signature, which calculates the signature using HMAC."
+  },
+  {
+    "question": "What is TimedSerializer used for?",
+    "ground_truth": "TimedSerializer is used to sign a value and also attach a timestamp before generating the signature. This allows verifying that the signature is still valid within a certain maximum age limit."
+  },
+  {
+    "question": "What exception is raised when a signature is invalid?",
+    "ground_truth": "When a signature is invalid, itsdangerous raises a BadSignature exception, which is a subclass of BadData. If a timed signature has expired, it raises SignatureExpired."
+  }
+]
