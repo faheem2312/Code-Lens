@@ -1,6 +1,7 @@
 import os
 from supabase import create_client
 from dotenv import load_dotenv
+from src.utils import normalize_repo_url
 
 load_dotenv()
 
@@ -21,6 +22,8 @@ def bm25_search(
     """
     if not query.strip():
         return []
+
+    repo_url = normalize_repo_url(repo_url)
 
     # Clean query and wrap in double quotes to avoid PostgREST parsing errors (like commas)
     clean_query = query.replace('"', '')

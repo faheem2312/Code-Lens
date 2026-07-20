@@ -1,4 +1,4 @@
-﻿import sys, os
+import sys, os
 sys.path.insert(0, os.getcwd())
 
 from src.compliance.sanitizer    import sanitize_query
@@ -12,7 +12,7 @@ print(f"  Flagged: {result['flagged']}")
 print(f"  Flags:   {result['flags']}")
 
 # Test 2: PII detection
-scan = scan_for_pii("def send(email='faheem@gmail.com'): pass")
+scan = scan_for_pii("def send(email='mansurifaheem1111@gmail.com'): pass")
 print("\nPII test:")
 print(f"  Has PII: {scan['has_pii']}")
 print(f"  Types:   {[f['type'] for f in scan['findings']]}")

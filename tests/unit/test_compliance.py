@@ -18,6 +18,6 @@ def test_pii_detection():
     assert any(f["type"] == "EMAIL_ADDRESS" for f in scan["findings"])
 
 def test_pii_redaction():
-    text = "contact me at faheem@gmail.com"
+    text = "contact me at mansurifaheem1111@gmail.com"
     redacted = redact_pii(text)
-    assert "faheem@gmail.com" not in redacted
+    assert "mansurifaheem1111@gmail.com" not in redacted

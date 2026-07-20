@@ -1084,7 +1084,7 @@
         </svg>
         <div class="title-wrap">
           <h1>CodeLens</h1>
-          <p>Semantic RAG Search for GitHub Repositories</p>
+          <p>AI Code Assistant & Repository Search</p>
         </div>
       </div>
       
@@ -1092,12 +1092,7 @@
       <div class="health-status-bar">
         <div class="status-indicator">
           <span class="status-dot online" id="system-status-dot"></span>
-          <span id="system-status-text">System Online</span>
-        </div>
-        <div class="model-tags">
-          <span class="model-tag-item">LLM: <strong id="llm-badge">Gemini-3.1-Flash</strong></span>
-          <span class="model-tag-item">Embed: <strong id="embed-badge">Gemini-Embedding-2</strong></span>
-          <span class="model-tag-item">Rerank: <strong id="rerank-badge">Rerank-v4</strong></span>
+          <span id="system-status-text">System Ready</span>
         </div>
       </div>
     </header>
@@ -1126,7 +1121,7 @@
         <div class="glass-card" id="targetCodebaseCard">
           <div class="card-header">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
-            <h2>Target Codebase</h2>
+            <h2>Selected Repository</h2>
           </div>
           
           <div class="form-group">
@@ -1137,16 +1132,16 @@
                 placeholder="https://github.com/owner/repo"
                 value="https://github.com/pallets/itsdangerous" />
             </div>
-            <p class="field-hint">We will search semantic chunks indexed for this repository</p>
+            <p class="field-hint">Select an indexed repository to search</p>
           </div>
 
           <div class="form-group">
             <div class="slider-header">
-              <label for="topK">RAG Context Count (Top K)</label>
+              <label for="topK">Search Depth</label>
               <span id="topKVal" class="slider-badge">5</span>
             </div>
             <input id="topK" class="slider" type="range" value="5" min="1" max="20" step="1" oninput="document.getElementById('topKVal').textContent = this.value" />
-            <p class="field-hint">Number of semantic code chunks to retrieve for analysis</p>
+            <p class="field-hint">Controls how many code files to inspect for answers</p>
           </div>
         </div>
 
@@ -1204,8 +1199,8 @@
         <!-- Welcome Screen -->
         <div id="welcomeScreen" class="glass-card welcome-card">
           <div class="glow-symbol">✨</div>
-          <h2>Semantic Code Explorer</h2>
-          <p class="welcome-tag">Ask structural or functional questions about the target codebase and get precise explanations backed by source files.</p>
+          <h2>Codebase Assistant</h2>
+          <p class="welcome-tag">Ask questions about any GitHub repository and get clear explanations backed by source files.</p>
           
           <div class="example-grid-title">💡 Try these example queries:</div>
           <div class="example-grid">
@@ -1301,11 +1296,11 @@
           </div>
         </div>
 
-        <!-- Sources / Retrieved Chunks (Hidden by default) -->
+        <!-- Sources / Referenced Code (Hidden by default) -->
         <div class="glass-card sources-card-outer hidden" id="sourcesCard">
           <div class="card-header">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-            <h2>Retrieved Context Chunks</h2>
+            <h2>Referenced Code Files</h2>
           </div>
           
           <div class="chunks-list" id="chunksContainer">
@@ -1514,14 +1509,13 @@
         document.getElementById('mLatency').textContent = `${latencySec}s`;
         document.getElementById('mTokens').textContent = data.tokens.toLocaleString();
         document.getElementById('mChunks').textContent = data.chunks ? data.chunks.length : 0;
-        document.getElementById('metricsCard').classList.remove('hidden');
+        // Keep technical metrics hidden by default for non-technical users
 
         const container = document.getElementById('chunksContainer');
         container.innerHTML = '';
         
         if (data.chunks && data.chunks.length > 0) {
           data.chunks.forEach(chunk => {
-            const scorePercent = chunk.rerank_score ? Math.round(chunk.rerank_score * 100) : 0;
             const githubLink = makeGithubLink(repoUrl, chunk.file_path, chunk.start_line, chunk.end_line);
             
             const card = document.createElement('div');
@@ -1532,16 +1526,10 @@
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.193 22 16.44 22 12.017 22 6.484 17.522 2 12 2z"/></svg>
                   <span>${chunk.file_path}</span>
                 </a>
-                <div class="chunk-score-wrap">
-                  ${chunk.rerank_score ? `<span class="score-badge">Match: ${scorePercent}%</span>` : ''}
-                </div>
               </div>
               <div class="chunk-meta">
                 <div class="chunk-meta-item">Lines: <strong>${chunk.start_line} - ${chunk.end_line}</strong></div>
                 ${chunk.function_name ? `<div class="chunk-meta-item">Function: <code>${chunk.function_name}</code></div>` : ''}
-              </div>
-              <div class="chunk-score-bar-bg">
-                <div class="chunk-score-bar-fill" style="width: ${scorePercent}%"></div>
               </div>
             `;
             container.appendChild(card);

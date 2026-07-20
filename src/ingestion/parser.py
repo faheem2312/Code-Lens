@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from tree_sitter import Language, Parser
 import tree_sitter_python as tspython
@@ -12,9 +13,15 @@ LANGUAGE_MAP = {
     ".ts":  JS_LANGUAGE,
 }
 
+SUPPORTED_EXTENSIONS = {
+    ".py", ".js", ".ts", ".jsx", ".tsx",
+    ".html", ".css", ".json", ".yaml", ".yml", ".toml", ".md",
+    ".go", ".java", ".rs", ".cpp", ".c", ".h"
+}
+
 SKIP_DIRS = {
     "node_modules", ".git", "venv", "__pycache__",
-    ".venv", "dist", "build", ".next", "coverage",
+    ".venv", "dist", "build", ".next", "coverage", ".pytest_cache",
 }
 
 FUNCTION_NODE_TYPES = {
@@ -24,7 +31,17 @@ FUNCTION_NODE_TYPES = {
     "arrow_function",
 }
 
-MIN_FUNCTION_LINES = 2
+CLASS_NODE_TYPES = {
+    "class_definition",
+    "class_declaration",
+}
+
+IMPORT_NODE_TYPES = {
+    "import_statement",
+    "import_from_statement",
+}
+
+MIN_CHUNK_LINES = 1
 
 
 def get_parser(extension: str) -> Parser | None:
@@ -36,13 +53,77 @@ def get_parser(extension: str) -> Parser | None:
     return parser
 
 
+def parse_fallback_chunks(file_path: str, ext: str) -> list[dict]:
+    """
+    Fallback structural parser for HTML, CSS, Configs, Markdown, and non-tree-sitter languages.
+    Splits content into logical sections or 40-line blocks.
+    """
+    path = Path(file_path)
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+    except (OSError, PermissionError):
+        return []
+
+    if not lines:
+        return []
+
+    chunks = []
+    chunk_size = 40
+    overlap = 5
+    total_lines = len(lines)
+
+    lang = ext.lstrip(".")
+
+    for i in range(0, total_lines, chunk_size - overlap):
+        chunk_lines = lines[i : i + chunk_size]
+        if not chunk_lines:
+            break
+
+        start_line = i + 1
+        end_line = min(i + chunk_size, total_lines)
+        code = "".join(chunk_lines)
+
+        # Infer section name
+        if ext in {".html", ".htm"}:
+            name = f"html-section (L{start_line}-{end_line})"
+        elif ext in {".css"}:
+            name = f"css-rules (L{start_line}-{end_line})"
+        elif ext in {".json", ".yaml", ".yml", ".toml"}:
+            name = f"config-block (L{start_line}-{end_line})"
+        elif ext in {".md"}:
+            name = f"doc-section (L{start_line}-{end_line})"
+        else:
+            name = f"code-block (L{start_line}-{end_line})"
+
+        chunks.append({
+            "file_path":     str(path),
+            "function_name": name,
+            "language":      lang,
+            "start_line":    start_line,
+            "end_line":      end_line,
+            "content":       code,
+        })
+
+    return chunks
+
+
 def extract_functions(file_path: str) -> list[dict]:
+    """
+    Extract logical chunks (functions, classes, imports, config blocks, HTML/CSS sections) from a file.
+    Maintains function signature compatibility with existing pipeline.
+    """
     path   = Path(file_path)
-    ext    = path.suffix
+    ext    = path.suffix.lower()
+
+    if ext not in SUPPORTED_EXTENSIONS:
+        return []
+
     parser = get_parser(ext)
 
+    # Use structural fallback for non-Tree-Sitter supported file types (HTML, CSS, JSON, YAML, Go, Rust, etc.)
     if not parser:
-        return []
+        return parse_fallback_chunks(file_path, ext)
 
     try:
         with open(file_path, "rb") as f:
@@ -53,32 +134,58 @@ def extract_functions(file_path: str) -> list[dict]:
     tree   = parser.parse(source)
     root   = tree.root_node
     chunks = []
+    visited_bytes = set()
 
     def traverse(node):
-        if node.type in FUNCTION_NODE_TYPES:
+        node_key = (node.start_byte, node.end_byte)
+
+        # Parse Functions & Methods
+        if node.type in FUNCTION_NODE_TYPES and node_key not in visited_bytes:
+            visited_bytes.add(node_key)
             start = node.start_point[0]
             end   = node.end_point[0]
 
-            if (end - start) < MIN_FUNCTION_LINES:
-                for child in node.children:
-                    traverse(child)
-                return
+            if (end - start) >= MIN_CHUNK_LINES:
+                code      = source[node.start_byte:node.end_byte].decode("utf-8", errors="ignore")
+                name_node = node.child_by_field_name("name")
+                name      = name_node.text.decode("utf-8") if name_node else "anonymous"
 
-            code      = source[node.start_byte:node.end_byte].decode("utf-8", errors="ignore")
-            name_node = node.child_by_field_name("name")
-            name      = name_node.text.decode("utf-8") if name_node else "anonymous"
+                chunks.append({
+                    "file_path":     str(path),
+                    "function_name": f"function:{name}",
+                    "language":      ext.lstrip("."),
+                    "start_line":    start + 1,
+                    "end_line":      end   + 1,
+                    "content":       code,
+                })
 
-            chunks.append({
-                "file_path":     str(path),
-                "function_name": name,
-                "language":      ext.lstrip("."),
-                "start_line":    start + 1,
-                "end_line":      end   + 1,
-                "content":       code,
-            })
+        # Parse Classes
+        elif node.type in CLASS_NODE_TYPES and node_key not in visited_bytes:
+            visited_bytes.add(node_key)
+            start = node.start_point[0]
+            end   = node.end_point[0]
+
+            if (end - start) >= MIN_CHUNK_LINES:
+                code      = source[node.start_byte:node.end_byte].decode("utf-8", errors="ignore")
+                name_node = node.child_by_field_name("name")
+                name      = name_node.text.decode("utf-8") if name_node else "anonymous"
+
+                chunks.append({
+                    "file_path":     str(path),
+                    "function_name": f"class:{name}",
+                    "language":      ext.lstrip("."),
+                    "start_line":    start + 1,
+                    "end_line":      end   + 1,
+                    "content":       code,
+                })
 
         for child in node.children:
             traverse(child)
 
     traverse(root)
-    return chunks
+
+    # If no AST nodes were captured (e.g. script only contains module imports or top-level code), fall back to line chunking
+    if not chunks:
+        return parse_fallback_chunks(file_path, ext)
+
+    return chunks

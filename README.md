@@ -122,11 +122,11 @@ To further build out CodeLens, we are following a structured phase-by-phase impl
 * [x] **Unit & Integration Tests**: Established comprehensive pytest suites covering parser, sanitization, compliance redaction, hybrid search, and FastAPI client routing.
 * [x] **RAG Evaluation Suite**: Implemented test datasets, Gemini wrappers, and Ragas metrics computation logged directly to MLflow.
 
-### Phase 2: Ingestion & Parsing Expansion (Next Step)
-* [ ] **AST Node Expansion**: Parse entire classes, global constants, package imports, docstrings, and config files (JSON/YAML/TOML) in `parser.py` rather than just function definitions.
-* [ ] **Multi-Language Support**: Enable Tree-sitter configurations for Go, Rust, Java, and C++.
-* [ ] **HTML & CSS Landing Page Understanding**: Implement fallback text-structure parsing for `.html` and `.css` files. This will allow CodeLens to answer layout, markup, and styling questions.
-* [ ] **AI Ingestion Summaries**: Generate Gemini logic summaries of code chunks during ingestion to enrich the search index.
+### Phase 2: Ingestion & Parsing Expansion (Completed)
+* [x] **AST Node Expansion**: Parse entire classes, global constants, package imports, docstrings, and config files (JSON/YAML/TOML) in `parser.py` rather than just function definitions.
+* [x] **Multi-Language Support**: Enable Tree-sitter and structural fallback configurations for Go, Rust, Java, C++, HTML, and CSS.
+* [x] **HTML & CSS Landing Page Understanding**: Implement fallback text-structure parsing for `.html` and `.css` files. This allows CodeLens to answer layout, markup, and styling questions.
+* [x] **AI Ingestion Summaries**: Enrich code chunk metadata and embeddings with AI logic summaries during ingestion.
 
 ### Phase 3: Code Semantics & Call-Graph Navigation
 * [ ] **Symbol Call-Graph Indexing**: Trace how functions interact. If function A calls function B, store these relationships inside the database.
@@ -139,3 +139,7 @@ To further build out CodeLens, we are following a structured phase-by-phase impl
 ### Phase 5: Production Readiness & Ops
 * [ ] **Docker Containers**: Deploy complete multi-container environments (FastAPI + local Postgres).
 * [ ] **WebSocket Real-Time Logging**: Replace polling with a WebSocket connection to stream cloning and indexing logs to the user interface in real-time.
+
+### Phase 6: User Management, Subscriptions, & Billing
+* [ ] **Authentication & Authorization**: Implement user registration, secure login/signup sessions, and token-based API access control (JWT).
+* [ ] **Payment Gateway Integration**: Integrate Stripe/PayPal subscription models to manage monthly API usage tiers and premium repository limits.

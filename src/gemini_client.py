@@ -1,4 +1,4 @@
-﻿import os
+import os
 import time
 from google import genai
 from google.genai import types
@@ -11,6 +11,14 @@ client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 GEMINI_MODEL       = os.getenv("GEMINI_MODEL",       "gemini-3.1-flash-lite")
 GEMINI_EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL",  "gemini-embedding-2")
 EMBEDDING_DIM      = int(os.getenv("EMBEDDING_DIM",   "768"))
+
+
+def safe_print(msg: str):
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        clean_msg = msg.encode('ascii', errors='ignore').decode('ascii')
+        print(clean_msg.strip())
 
 
 def generate_text(system_prompt: str, user_prompt: str) -> tuple[str, int]:
@@ -33,7 +41,7 @@ def generate_text(system_prompt: str, user_prompt: str) -> tuple[str, int]:
         except Exception as e:
             if attempt < 2:
                 wait = (attempt + 1) * 15
-                print(f"  ⚠️ Gemini generate error, retrying in {wait}s: {e}")
+                safe_print(f"  ⚠️ Gemini generate error, retrying in {wait}s: {e}")
                 time.sleep(wait)
             else:
                 raise
@@ -58,7 +66,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
             except Exception as e:
                 if attempt < 2:
                     wait = (attempt + 1) * 40
-                    print(f"  ⚠️ Embedding rate limit, waiting {wait}s...")
+                    safe_print(f"  ⚠️ Embedding rate limit, waiting {wait}s...")
                     time.sleep(wait)
                 else:
                     raise
@@ -96,7 +104,7 @@ def summarize_function(chunk: dict) -> str:
         except Exception as e:
             if attempt < 2:
                 wait = (attempt + 1) * 10
-                print(f"  ⚠️ Summary error, retrying in {wait}s: {e}")
+                safe_print(f"  ⚠️ Summary error, retrying in {wait}s: {e}")
                 time.sleep(wait)
             else:
                 return f"Function {chunk['function_name']} in {chunk['file_path']}"

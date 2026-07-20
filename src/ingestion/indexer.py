@@ -12,6 +12,7 @@ from src.ingestion.parser      import extract_functions, SKIP_DIRS
 from src.ingestion.chunker     import enrich_chunk
 from src.ingestion.embedder    import embed_texts
 from src.compliance.pii_detector import scan_for_pii, redact_pii
+from src.utils import normalize_repo_url
 
 load_dotenv()
 
@@ -20,7 +21,11 @@ supabase = create_client(
     os.getenv("SUPABASE_KEY"),
 )
 
-SUPPORTED_EXTENSIONS = {".py", ".js", ".ts"}
+SUPPORTED_EXTENSIONS = {
+    ".py", ".js", ".ts", ".jsx", ".tsx",
+    ".html", ".css", ".json", ".yaml", ".yml", ".toml", ".md",
+    ".go", ".java", ".rs", ".cpp", ".c", ".h"
+}
 BATCH_SIZE = 10
 
 
@@ -127,6 +132,7 @@ def get_existing_hashes(repo_url: str) -> set[str]:
 
 
 def index_repository(repo_path: str, repo_url: str) -> dict:
+    repo_url = normalize_repo_url(repo_url)
     task_manager.log(repo_url, "🔍 Scanning codebase directories...")
 
     existing_hashes = get_existing_hashes(repo_url)
@@ -222,6 +228,7 @@ def index_repository(repo_path: str, repo_url: str) -> dict:
 
 def clone_and_index(repo_url: str) -> dict:
     """Clone a GitHub repo and index it — used by the API."""
+    repo_url = normalize_repo_url(repo_url)
     task_manager.start_task(repo_url)
     repo_path = ""
     try:

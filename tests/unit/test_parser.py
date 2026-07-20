@@ -18,7 +18,19 @@ def test_extract_functions_python():
         assert chunk["language"] == "py"
         assert chunk["function_name"] != "anonymous"
 
+def test_extract_html_css_config():
+    # Test fallback parser on index.html
+    html_path = os.path.join("static", "index.html")
+    chunks = extract_functions(html_path)
+    
+    assert isinstance(chunks, list)
+    assert len(chunks) > 0
+    for chunk in chunks:
+        assert chunk["language"] == "html"
+        assert "html-section" in chunk["function_name"]
+
 def test_extract_functions_unsupported_file():
-    # Test on an unsupported file type
-    chunks = extract_functions("requirements.txt")
+    # Test on an unsupported file extension
+    chunks = extract_functions("image.png")
     assert chunks == []
+

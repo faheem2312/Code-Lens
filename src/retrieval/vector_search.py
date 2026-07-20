@@ -1,7 +1,8 @@
-﻿import os
+import os
 from dotenv import load_dotenv
 from supabase import create_client
 from src.ingestion.embedder import embed_single
+from src.utils import normalize_repo_url
 
 load_dotenv()
 
@@ -17,6 +18,7 @@ def vector_search(
     match_count: int   = 15,
     threshold:   float = 0.4,
 ) -> list[dict]:
+    repo_url = normalize_repo_url(repo_url)
     query_vector = embed_single(query)
     result = supabase.rpc(
         "match_chunks",
