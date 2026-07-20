@@ -1607,84 +1607,118 @@
     }
 
     function startPollingLogs(repoUrl, originalBtnHTML) {
-      if (logPollInterval) clearInterval(logPollInterval);
-      
+    let logWebSocket = null;
+
+    function handleLogData(data, repoUrl, originalBtnHTML) {
       const logConsoleBody = document.getElementById('logConsoleBody');
       const consolePulse = document.getElementById('consolePulse');
       const cancelBtn = document.getElementById('cancelIndexBtn');
       const btn = document.getElementById('indexBtn');
-      
-      consolePulse.style.background = "#22c55e"; 
 
+      const logs = data.logs || [];
+      const status = data.status || "processing";
+
+      if (logs.length > 0) {
+        logs.forEach(log => {
+          logConsoleBody.innerHTML += `${log}\n`;
+        });
+        logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
+      }
+
+      if (status === "completed") {
+        if (logPollInterval) clearInterval(logPollInterval);
+        if (logWebSocket) logWebSocket.close();
+        logConsoleBody.innerHTML += `\n✅ INDEXING COMPLETED SUCCESSFULLY!\n`;
+        logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
+        
+        document.getElementById('indexSuccessBox').innerHTML = `
+          <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            Repository Indexing Completed
+          </div>
+          <p style="margin-bottom: 0.5rem;">Repository: <strong>${repoUrl}</strong></p>
+          <p>Your codebase is fully indexed and ready for Q&A search.</p>
+        `;
+        document.getElementById('indexSuccessCard').classList.remove('hidden');
+        document.getElementById('repoUrl').value = repoUrl;
+        
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHTML;
+        cancelBtn.classList.add('hidden');
+        consolePulse.style.background = "#22c55e";
+      } else if (status === "cancelled") {
+        if (logPollInterval) clearInterval(logPollInterval);
+        if (logWebSocket) logWebSocket.close();
+        logConsoleBody.innerHTML += `\n❌ INDEXING CANCELLED BY USER!\n`;
+        logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
+        
+        document.getElementById('indexErrorBox').textContent = "Indexing cancelled by user.";
+        document.getElementById('indexErrorCard').classList.remove('hidden');
+        
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHTML;
+        cancelBtn.classList.add('hidden');
+        consolePulse.style.background = "#ef4444";
+      } else if (status === "failed") {
+        if (logPollInterval) clearInterval(logPollInterval);
+        if (logWebSocket) logWebSocket.close();
+        logConsoleBody.innerHTML += `\n❌ INDEXING FAILED!\n`;
+        logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
+        
+        document.getElementById('indexErrorBox').textContent = "Indexing failed. See console logs for details.";
+        document.getElementById('indexErrorCard').classList.remove('hidden');
+        
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHTML;
+        cancelBtn.classList.add('hidden');
+        consolePulse.style.background = "#ef4444";
+      }
+    }
+
+    function fallbackToHttpPolling(repoUrl, originalBtnHTML) {
+      if (logPollInterval) clearInterval(logPollInterval);
       let lastLogsLength = 0;
-
       logPollInterval = setInterval(async () => {
         try {
           const res = await fetch(`/api/v1/ingest/logs?repo_url=${encodeURIComponent(repoUrl)}`);
           if (!res.ok) return;
-
           const data = await res.json();
           const logs = data.logs || [];
-          const status = data.status || "processing";
-
           if (logs.length > lastLogsLength) {
-            for (let i = lastLogsLength; i < logs.length; i++) {
-              logConsoleBody.innerHTML += `${logs[i]}\n`;
-            }
+            const newLogs = logs.slice(lastLogsLength);
             lastLogsLength = logs.length;
-            logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
-          }
-
-          if (status === "completed") {
-            clearInterval(logPollInterval);
-            logConsoleBody.innerHTML += `\n✅ INDEXING COMPLETED SUCCESSFULLY!\n`;
-            logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
-            
-            document.getElementById('indexSuccessBox').innerHTML = `
-              <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                Repository Indexing Completed
-              </div>
-              <p style="margin-bottom: 0.5rem;">Repository: <strong>${repoUrl}</strong></p>
-              <p>Your codebase is fully indexed and ready for Q&A search.</p>
-            `;
-            document.getElementById('indexSuccessCard').classList.remove('hidden');
-            
-            document.getElementById('repoUrl').value = repoUrl;
-            
-            btn.disabled = false;
-            btn.innerHTML = originalBtnHTML;
-            cancelBtn.classList.add('hidden');
-            consolePulse.style.background = "#22c55e";
-          } else if (status === "cancelled") {
-            clearInterval(logPollInterval);
-            logConsoleBody.innerHTML += `\n❌ INDEXING CANCELLED BY USER!\n`;
-            logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
-            
-            document.getElementById('indexErrorBox').textContent = "Indexing cancelled by user.";
-            document.getElementById('indexErrorCard').classList.remove('hidden');
-            
-            btn.disabled = false;
-            btn.innerHTML = originalBtnHTML;
-            cancelBtn.classList.add('hidden');
-            consolePulse.style.background = "#ef4444";
-          } else if (status === "failed") {
-            clearInterval(logPollInterval);
-            logConsoleBody.innerHTML += `\n❌ INDEXING FAILED!\n`;
-            logConsoleBody.scrollTop = logConsoleBody.scrollHeight;
-            
-            document.getElementById('indexErrorBox').textContent = "Indexing failed. See console logs for details.";
-            document.getElementById('indexErrorCard').classList.remove('hidden');
-            
-            btn.disabled = false;
-            btn.innerHTML = originalBtnHTML;
-            cancelBtn.classList.add('hidden');
-            consolePulse.style.background = "#ef4444";
+            handleLogData({ logs: newLogs, status: data.status }, repoUrl, originalBtnHTML);
+          } else if (data.status && data.status !== "processing") {
+            handleLogData({ logs: [], status: data.status }, repoUrl, originalBtnHTML);
           }
         } catch (err) {
           console.error("Error polling logs:", err);
         }
-      }, 2000);
+      }, 1500);
+    }
+
+    function startPollingLogs(repoUrl, originalBtnHTML) {
+      if (logPollInterval) clearInterval(logPollInterval);
+      if (logWebSocket) { logWebSocket.close(); logWebSocket = null; }
+      
+      const consolePulse = document.getElementById('consolePulse');
+      consolePulse.style.background = "#22c55e"; 
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/api/v1/ws/ingest/logs?repo_url=${encodeURIComponent(repoUrl)}`;
+
+      try {
+        logWebSocket = new WebSocket(wsUrl);
+        logWebSocket.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          handleLogData(data, repoUrl, originalBtnHTML);
+        };
+        logWebSocket.onerror = () => {
+          fallbackToHttpPolling(repoUrl, originalBtnHTML);
+        };
+      } catch (e) {
+        fallbackToHttpPolling(repoUrl, originalBtnHTML);
+      }
     }
 
     async function cancelIndex() {

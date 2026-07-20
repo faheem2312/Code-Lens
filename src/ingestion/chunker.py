@@ -1,4 +1,4 @@
-﻿import hashlib
+import hashlib
 
 
 def compute_hash(content: str) -> str:
@@ -6,13 +6,23 @@ def compute_hash(content: str) -> str:
 
 
 def build_embed_text(chunk: dict, summary: str) -> str:
-    return (
-        f"File: {chunk['file_path']}\n"
-        f"Function: {chunk['function_name']}\n"
-        f"Language: {chunk['language']}\n"
-        f"Summary: {summary}\n\n"
-        f"{chunk['content']}"
-    )
+    parent = chunk.get("parent_symbol", "")
+    calls = ", ".join(chunk.get("called_symbols", []))
+    
+    parts = [
+        f"File: {chunk['file_path']}",
+        f"Function: {chunk['function_name']}",
+    ]
+    if parent:
+        parts.append(f"Parent Scope: {parent}")
+    if calls:
+        parts.append(f"Calls: {calls}")
+    parts.extend([
+        f"Language: {chunk['language']}",
+        f"Summary: {summary}\n",
+        chunk['content']
+    ])
+    return "\n".join(parts)
 
 
 def enrich_chunk(chunk: dict, repo_url: str) -> dict:

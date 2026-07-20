@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
+import asyncio
+import os
 from datetime import datetime
 from src.api.models import (
     IngestRequest, IngestResponse,
@@ -14,6 +16,32 @@ router = APIRouter()
 @router.get("/health", response_model=HealthResponse)
 def health_check():
     return HealthResponse(status="healthy", timestamp=datetime.utcnow())
+
+
+@router.websocket("/ws/ingest/logs")
+async def websocket_ingest_logs(websocket: WebSocket, repo_url: str):
+    """
+    WebSocket endpoint for real-time streaming of repository ingestion logs.
+    """
+    await websocket.accept()
+    from src.ingestion.indexer import task_manager
+    last_log_index = 0
+
+    try:
+        while True:
+            info = task_manager.get_task_info(repo_url)
+            if info:
+                logs = info.get("logs", [])
+                status = info.get("status", "processing")
+                if len(logs) > last_log_index:
+                    new_logs = logs[last_log_index:]
+                    last_log_index = len(logs)
+                    await websocket.send_json({"logs": new_logs, "status": status})
+                if status in ("completed", "failed", "cancelled"):
+                    break
+            await asyncio.sleep(0.5)
+    except WebSocketDisconnect:
+        pass
 
 
 @router.post("/ingest", response_model=IngestResponse)

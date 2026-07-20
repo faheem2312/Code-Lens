@@ -12,6 +12,7 @@ from src.ingestion.parser      import extract_functions, SKIP_DIRS
 from src.ingestion.chunker     import enrich_chunk
 from src.ingestion.embedder    import embed_texts
 from src.compliance.pii_detector import scan_for_pii, redact_pii
+from src.compliance.secret_scanner import scan_and_redact_secrets
 from src.utils import normalize_repo_url
 
 load_dotenv()
@@ -165,11 +166,18 @@ def index_repository(repo_path: str, repo_url: str) -> dict:
             skipped += 1
             continue
 
+        # 1. PII Scan
         scan = scan_for_pii(ec["content"])
         if scan["has_pii"]:
             ec["content"]    = redact_pii(ec["content"])
             ec["embed_text"] = redact_pii(ec["embed_text"])
             pii_redacted += 1
+
+        # 2. Secret & Credential Scan
+        redacted_content, has_secrets, _ = scan_and_redact_secrets(ec["content"])
+        if has_secrets:
+            ec["content"]    = redacted_content
+            ec["embed_text"] = redact_pii(redacted_content)
 
         enriched.append(ec)
 

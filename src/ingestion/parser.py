@@ -53,6 +53,18 @@ def get_parser(extension: str) -> Parser | None:
     return parser
 
 
+def extract_called_symbols(code: str) -> list[str]:
+    """Extract symbol call names (e.g. store.New, jwt.GenerateToken, db.Query) from code snippet."""
+    dot_calls = re.findall(r'\b([a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*)\s*\(', code)
+    direct_calls = re.findall(r'\b([a-zA-Z_][a-zA-Z0-9_]{2,})\s*\(', code)
+    
+    keywords = {"if", "for", "while", "return", "switch", "func", "def", "class", "import", "type", "struct", "catch", "range", "len", "append", "make"}
+    valid_direct = [c for c in direct_calls if c not in keywords]
+    
+    unique_symbols = sorted(list(set(dot_calls + valid_direct)))
+    return unique_symbols[:10]
+
+
 def parse_fallback_chunks(file_path: str, ext: str) -> list[dict]:
     """
     Fallback structural parser for HTML, CSS, Configs, Markdown, and non-tree-sitter languages.
@@ -96,13 +108,17 @@ def parse_fallback_chunks(file_path: str, ext: str) -> list[dict]:
         else:
             name = f"code-block (L{start_line}-{end_line})"
 
+        called = extract_called_symbols(code)
+
         chunks.append({
-            "file_path":     str(path),
-            "function_name": name,
-            "language":      lang,
-            "start_line":    start_line,
-            "end_line":      end_line,
-            "content":       code,
+            "file_path":      str(path),
+            "function_name":  name,
+            "parent_symbol":  "",
+            "called_symbols": called,
+            "language":       lang,
+            "start_line":     start_line,
+            "end_line":       end_line,
+            "content":        code,
         })
 
     return chunks
@@ -136,11 +152,35 @@ def extract_functions(file_path: str) -> list[dict]:
     chunks = []
     visited_bytes = set()
 
-    def traverse(node):
+    def traverse(node, current_class=""):
         node_key = (node.start_byte, node.end_byte)
 
+        # Track Class Parent Scope
+        if node.type in CLASS_NODE_TYPES:
+            name_node = node.child_by_field_name("name")
+            class_name = name_node.text.decode("utf-8") if name_node else "AnonymousClass"
+            current_class = f"class:{class_name}"
+
+            if node_key not in visited_bytes:
+                visited_bytes.add(node_key)
+                start = node.start_point[0]
+                end   = node.end_point[0]
+                if (end - start) >= MIN_CHUNK_LINES:
+                    code   = source[node.start_byte:node.end_byte].decode("utf-8", errors="ignore")
+                    called = extract_called_symbols(code)
+                    chunks.append({
+                        "file_path":      str(path),
+                        "function_name":  current_class,
+                        "parent_symbol":  "",
+                        "called_symbols": called,
+                        "language":       ext.lstrip("."),
+                        "start_line":     start + 1,
+                        "end_line":       end   + 1,
+                        "content":        code,
+                    })
+
         # Parse Functions & Methods
-        if node.type in FUNCTION_NODE_TYPES and node_key not in visited_bytes:
+        elif node.type in FUNCTION_NODE_TYPES and node_key not in visited_bytes:
             visited_bytes.add(node_key)
             start = node.start_point[0]
             end   = node.end_point[0]
@@ -149,38 +189,21 @@ def extract_functions(file_path: str) -> list[dict]:
                 code      = source[node.start_byte:node.end_byte].decode("utf-8", errors="ignore")
                 name_node = node.child_by_field_name("name")
                 name      = name_node.text.decode("utf-8") if name_node else "anonymous"
+                called    = extract_called_symbols(code)
 
                 chunks.append({
-                    "file_path":     str(path),
-                    "function_name": f"function:{name}",
-                    "language":      ext.lstrip("."),
-                    "start_line":    start + 1,
-                    "end_line":      end   + 1,
-                    "content":       code,
-                })
-
-        # Parse Classes
-        elif node.type in CLASS_NODE_TYPES and node_key not in visited_bytes:
-            visited_bytes.add(node_key)
-            start = node.start_point[0]
-            end   = node.end_point[0]
-
-            if (end - start) >= MIN_CHUNK_LINES:
-                code      = source[node.start_byte:node.end_byte].decode("utf-8", errors="ignore")
-                name_node = node.child_by_field_name("name")
-                name      = name_node.text.decode("utf-8") if name_node else "anonymous"
-
-                chunks.append({
-                    "file_path":     str(path),
-                    "function_name": f"class:{name}",
-                    "language":      ext.lstrip("."),
-                    "start_line":    start + 1,
-                    "end_line":      end   + 1,
-                    "content":       code,
+                    "file_path":      str(path),
+                    "function_name":  f"function:{name}",
+                    "parent_symbol":  current_class,
+                    "called_symbols": called,
+                    "language":       ext.lstrip("."),
+                    "start_line":     start + 1,
+                    "end_line":       end   + 1,
+                    "content":        code,
                 })
 
         for child in node.children:
-            traverse(child)
+            traverse(child, current_class)
 
     traverse(root)
 

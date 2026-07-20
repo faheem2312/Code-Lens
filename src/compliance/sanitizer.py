@@ -7,6 +7,10 @@ INJECTION_PATTERNS = [
     r"forget everything", r"system prompt", r"jailbreak",
     r"pretend (you are|to be)", r"do anything now",
     r"<\|.*?\|>", r"\[INST\]", r"###\s*instruction",
+    r"reveal (the |your )*(system prompt|initial instructions)",
+    r"output (the |your )*(system prompt|instructions)",
+    r"bypass (all |safety |content )*filters",
+    r"dan mode", r"developer mode", r"override (system|safety)",
 ]
 
 MAX_QUERY_LENGTH = 500

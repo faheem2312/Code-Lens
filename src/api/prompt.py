@@ -1,10 +1,13 @@
-﻿def build_system_prompt(chunks: list[dict], repo_url: str) -> str:
+def build_system_prompt(chunks: list[dict], repo_url: str) -> str:
     context_blocks = []
     for i, chunk in enumerate(chunks, start=1):
+        parent_info = f"\nParent   : {chunk['parent_symbol']}" if chunk.get('parent_symbol') else ""
+        calls_info = f"\nCalls    : {', '.join(chunk['called_symbols'])}" if chunk.get('called_symbols') else ""
+        
         block = (
             f"--- Chunk {i} ---\n"
             f"File     : {chunk['file_path']}\n"
-            f"Function : {chunk['function_name']}\n"
+            f"Function : {chunk['function_name']}{parent_info}{calls_info}\n"
             f"Language : {chunk['language']}\n"
             f"Lines    : {chunk['start_line']}-{chunk['end_line']}\n"
             f"Summary  : {chunk.get('summary', 'N/A')}\n\n"

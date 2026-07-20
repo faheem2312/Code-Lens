@@ -128,17 +128,17 @@ To further build out CodeLens, we are following a structured phase-by-phase impl
 * [x] **HTML & CSS Landing Page Understanding**: Implement fallback text-structure parsing for `.html` and `.css` files. This allows CodeLens to answer layout, markup, and styling questions.
 * [x] **AI Ingestion Summaries**: Enrich code chunk metadata and embeddings with AI logic summaries during ingestion.
 
-### Phase 3: Code Semantics & Call-Graph Navigation
-* [ ] **Symbol Call-Graph Indexing**: Trace how functions interact. If function A calls function B, store these relationships inside the database.
-* [ ] **Context-Aware Retrieval**: Implement Parent-Child chunking relationships (retrieving precise functions, but displaying parent class/file context to the LLM) and Graph RAG expansions.
+### Phase 3: Code Semantics & Call-Graph Navigation (Completed)
+* [x] **Symbol Call-Graph Indexing**: Trace how functions interact. Extracts symbol calls (e.g. `store.New`, `jwt.GenerateToken`) and parent class scopes during AST parsing.
+* [x] **Context-Aware Retrieval**: Pass parent scope and symbol call references into LLM prompt contexts for accurate call hierarchy explanations.
 
-### Phase 4: Advanced Security & Guardrails
-* [ ] **Secret Scanning**: Integrate TruffleHog/git-secrets in the ingestion process to block credentials from being uploaded.
-* [ ] **Lightweight LLM Guardrails**: Replace regex sanitizers with a classifier model (like Llama Guard) to block advanced jailbreak attempts.
+### Phase 4: Advanced Security & Guardrails (Completed)
+* [x] **Secret Scanning**: Automated credential scanning (`secret_scanner.py`) during ingestion to redact AWS keys, API tokens, RSA/SSH private keys, JWTs, and database credentials.
+* [x] **Lightweight LLM Guardrails**: Multi-layer prompt injection and jailbreak classifiers (`sanitizer.py`) blocking prompt leakage and instruction overrides.
 
-### Phase 5: Production Readiness & Ops
-* [ ] **Docker Containers**: Deploy complete multi-container environments (FastAPI + local Postgres).
-* [ ] **WebSocket Real-Time Logging**: Replace polling with a WebSocket connection to stream cloning and indexing logs to the user interface in real-time.
+### Phase 5: Production Readiness & Ops (Completed)
+* [x] **Docker Containers**: Production multi-container environment configured in `Dockerfile` and `docker-compose.yml` (FastAPI + PostgreSQL pgvector).
+* [x] **WebSocket Real-Time Logging**: Added `/api/v1/ws/ingest/logs` WebSocket endpoint with real-time log streaming in `static/index.html`.
 
 ### Phase 6: User Management, Subscriptions, & Billing
 * [ ] **Authentication & Authorization**: Implement user registration, secure login/signup sessions, and token-based API access control (JWT).

@@ -29,6 +29,16 @@ def test_extract_html_css_config():
         assert chunk["language"] == "html"
         assert "html-section" in chunk["function_name"]
 
+def test_called_symbols_extraction():
+    file_path = os.path.join("src", "query.py")
+    chunks = extract_functions(file_path)
+    
+    assert len(chunks) > 0
+    for chunk in chunks:
+        assert "called_symbols" in chunk
+        assert "parent_symbol" in chunk
+        assert isinstance(chunk["called_symbols"], list)
+
 def test_extract_functions_unsupported_file():
     # Test on an unsupported file extension
     chunks = extract_functions("image.png")
