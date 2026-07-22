@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -27,3 +27,12 @@ if os.path.exists("static"):
 @app.get("/")
 def serve_ui():
     return FileResponse("static/index.html")
+
+@app.get("/login")
+def serve_login():
+    return FileResponse("static/login.html")
+
+@app.get("/pricing")
+@app.get("/billing")
+def serve_pricing():
+    return FileResponse("static/pricing.html")

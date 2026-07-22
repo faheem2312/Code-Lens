@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Header
+from typing import Optional
 import asyncio
 import os
 from datetime import datetime
@@ -6,9 +7,13 @@ from src.api.models import (
     IngestRequest, IngestResponse,
     QueryRequest, QueryResponse,
     HealthResponse, ChunkSource,
+    UserRegister, UserLogin, TokenResponse, UserProfile,
+    CheckoutRequest, CheckoutResponse,
 )
 from src.ingestion.indexer import index_repository
 from src.query import query_codelens
+from src.api.auth import user_manager, create_access_token, verify_token
+from src.api.billing import create_checkout_session
 
 router = APIRouter()
 
@@ -16,6 +21,76 @@ router = APIRouter()
 @router.get("/health", response_model=HealthResponse)
 def health_check():
     return HealthResponse(status="healthy", timestamp=datetime.utcnow())
+
+
+@router.post("/auth/register", response_model=TokenResponse)
+def register_user(request: UserRegister):
+    try:
+        user = user_manager.register_user(request.email, request.password, request.full_name or "")
+        token = create_access_token({"sub": user["email"], "user_id": user["user_id"], "tier": user["tier"]})
+        return TokenResponse(
+            access_token=token,
+            user_id=user["user_id"],
+            email=user["email"],
+            tier=user["tier"],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/auth/login", response_model=TokenResponse)
+def login_user(request: UserLogin):
+    user = user_manager.authenticate_user(request.email, request.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+    token = create_access_token({"sub": user["email"], "user_id": user["user_id"], "tier": user["tier"]})
+    return TokenResponse(
+        access_token=token,
+        user_id=user["user_id"],
+        email=user["email"],
+        tier=user["tier"],
+    )
+
+
+@router.get("/auth/me", response_model=UserProfile)
+def get_current_user(authorization: str = Header(..., description="Bearer token")):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header format.")
+    token = authorization.split(" ", 1)[1]
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    
+    user = user_manager.get_user(payload.get("sub", ""))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+        
+    return UserProfile(
+        user_id=user["user_id"],
+        email=user["email"],
+        full_name=user.get("full_name", ""),
+        tier=user.get("tier", "free"),
+        repos_indexed=user.get("repos_indexed", 0),
+        repo_limit=user.get("repo_limit", 3),
+    )
+
+
+@router.post("/billing/checkout", response_model=CheckoutResponse)
+def checkout(request: CheckoutRequest, authorization: Optional[str] = Header(None)):
+    user_id = "anonymous"
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ", 1)[1]
+        payload = verify_token(token)
+        if payload:
+            user_id = payload.get("user_id", "anonymous")
+            # Automatically upgrade user tier upon checkout in demo mode
+            user_manager.update_tier(payload.get("sub", ""), request.tier)
+
+    res = create_checkout_session(user_id=user_id, tier=request.tier, success_url=request.success_url, cancel_url=request.cancel_url)
+    return CheckoutResponse(
+        checkout_url=res["checkout_url"],
+        session_id=res["session_id"],
+    )
 
 
 @router.websocket("/ws/ingest/logs")

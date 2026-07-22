@@ -1083,17 +1083,29 @@
           <path d="M13 8.5 L15 10.5 L13 12.5" stroke-width="2" />
         </svg>
         <div class="title-wrap">
-          <h1>CodeLens</h1>
+          <h1 style="display: flex; align-items: center; gap: 0.5rem;">
+            CodeLens
+            <span class="status-dot online" id="system-status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block; box-shadow: 0 0 8px #22c55e;"></span>
+          </h1>
           <p>AI Code Assistant & Repository Search</p>
         </div>
       </div>
       
-      <!-- System Health Bar -->
-      <div class="health-status-bar">
-        <div class="status-indicator">
-          <span class="status-dot online" id="system-status-dot"></span>
-          <span id="system-status-text">System Ready</span>
+      <!-- Right Side Navigation Elements -->
+      <div class="nav-controls" style="display: flex; align-items: center; gap: 1.25rem;">
+        <!-- Logged In State -->
+        <div id="userInfo" class="hidden" style="font-size: 0.85rem; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 0.5rem;">
+          <span id="userFirstName">—</span>
+          <span id="userTier" style="background: #e2e8f0; color: #475569; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px; text-transform: uppercase;">FREE</span>
         </div>
+        <a href="/pricing" id="pricingBtn" class="action-btn-pill hidden" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 0.45rem 0.9rem; border-radius: 20px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); text-decoration: none;">
+          ⚡ Upgrade to Pro
+        </a>
+        <button id="logoutBtn" class="hidden" onclick="handleLogout()" style="background: transparent; border: none; font-weight: 700; font-size: 0.85rem; color: #ef4444; cursor: pointer;">Log Out</button>
+
+        <!-- Logged Out State -->
+        <a href="/login?tab=login" id="loginBtn" style="font-weight: 700; font-size: 0.85rem; color: #475569; text-decoration: none;">Log In</a>
+        <a href="/login?tab=signup" id="signupBtn" class="action-btn-pill" style="background: #0f172a; color: white; border: none; padding: 0.45rem 0.9rem; border-radius: 20px; font-weight: 700; cursor: pointer; text-decoration: none; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);">Sign Up</a>
       </div>
     </header>
 
@@ -1315,10 +1327,71 @@
   <script>
     // Health check on page load
     window.addEventListener('DOMContentLoaded', () => {
+      verifyAuthentication();
       checkSystemHealth();
       window.addEventListener('resize', handleResize);
       handleResize();
     });
+
+    async function verifyAuthentication() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showLoggedOutState();
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/v1/auth/me', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) {
+          throw new Error('Session expired');
+        }
+        const user = await res.json();
+        showLoggedInState(user);
+      } catch (err) {
+        localStorage.clear();
+        showLoggedOutState();
+      }
+    }
+
+    function showLoggedInState(user) {
+      const firstName = user.full_name ? user.full_name.split(' ')[0] : user.email.split('@')[0];
+      document.getElementById('userFirstName').textContent = firstName;
+      document.getElementById('userTier').textContent = user.tier.toUpperCase();
+      if (user.tier === 'pro') {
+        document.getElementById('userTier').style.background = '#10b981';
+        document.getElementById('userTier').style.color = '#fff';
+      } else {
+        document.getElementById('userTier').style.background = '#e2e8f0';
+        document.getElementById('userTier').style.color = '#475569';
+      }
+
+      document.getElementById('userInfo').classList.remove('hidden');
+      if (user.tier === 'pro') {
+        document.getElementById('pricingBtn').classList.add('hidden');
+      } else {
+        document.getElementById('pricingBtn').classList.remove('hidden');
+      }
+      document.getElementById('logoutBtn').classList.remove('hidden');
+
+      document.getElementById('loginBtn').classList.add('hidden');
+      document.getElementById('signupBtn').classList.add('hidden');
+    }
+
+    function showLoggedOutState() {
+      document.getElementById('userInfo').classList.add('hidden');
+      document.getElementById('pricingBtn').classList.add('hidden');
+      document.getElementById('logoutBtn').classList.add('hidden');
+
+      document.getElementById('loginBtn').classList.remove('hidden');
+      document.getElementById('signupBtn').classList.remove('hidden');
+    }
+
+    function handleLogout() {
+      localStorage.clear();
+      window.location.reload();
+    }
 
     function handleResize() {
       if (window.innerWidth > 992) {
@@ -1329,20 +1402,25 @@
     }
 
     async function checkSystemHealth() {
+      const dot = document.getElementById('system-status-dot');
+      if (!dot) return;
+
       try {
         const res = await fetch('/api/v1/health');
         if (res.ok) {
-          const data = await res.json();
-          document.getElementById('system-status-dot').className = 'status-dot online';
-          document.getElementById('system-status-text').textContent = 'System Online';
-          if (data.models) {
-            if (data.models.llm) document.getElementById('llm-badge').textContent = data.models.llm;
-            if (data.models.embedding) document.getElementById('embed-badge').textContent = data.models.embedding;
-            if (data.models.reranker) document.getElementById('rerank-badge').textContent = data.models.reranker;
-          }
+          dot.className = 'status-dot online';
+          dot.style.background = '#22c55e';
+          dot.style.boxShadow = '0 0 8px #22c55e';
+        } else {
+          dot.className = 'status-dot offline';
+          dot.style.background = '#ef4444';
+          dot.style.boxShadow = '0 0 8px #ef4444';
         }
       } catch (err) {
         console.error('System health check failed:', err);
+        dot.className = 'status-dot offline';
+        dot.style.background = '#ef4444';
+        dot.style.boxShadow = '0 0 8px #ef4444';
       }
     }
 
@@ -1491,7 +1569,10 @@
       try {
         const res = await fetch('/api/v1/query', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+          },
           body: JSON.stringify({ question, repo_url: repoUrl, top_k: topK })
         });
 
@@ -1583,7 +1664,10 @@
       try {
         const res = await fetch('/api/v1/ingest', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+          },
           body: JSON.stringify({ repo_url: repoUrl, repo_path: '' })
         });
 
@@ -1680,7 +1764,9 @@
       let lastLogsLength = 0;
       logPollInterval = setInterval(async () => {
         try {
-          const res = await fetch(`/api/v1/ingest/logs?repo_url=${encodeURIComponent(repoUrl)}`);
+          const res = await fetch(`/api/v1/ingest/logs?repo_url=${encodeURIComponent(repoUrl)}`, {
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+          });
           if (!res.ok) return;
           const data = await res.json();
           const logs = data.logs || [];
@@ -1734,7 +1820,8 @@
       
       try {
         await fetch(`/api/v1/ingest/cancel?repo_url=${encodeURIComponent(currentPollingRepo)}`, {
-          method: 'POST'
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
         });
       } catch (err) {
         console.error("Error cancelling index:", err);
@@ -1754,6 +1841,102 @@
       this.style.height = "auto";
       this.style.height = (this.scrollHeight) + "px";
     }, false);
+
+    function openPaymentModal() {
+      const modal = document.getElementById('paymentModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+      }
+    }
+
+    function closePaymentModal() {
+      const modal = document.getElementById('paymentModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }
+    }
+
+    async function startCheckout(tier) {
+      try {
+        const res = await fetch('/api/v1/billing/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tier: tier,
+            success_url: window.location.origin + '/?subscription=success',
+            cancel_url: window.location.origin + '/?subscription=cancel'
+          })
+        });
+        if (!res.ok) throw new Error('Checkout initialization failed');
+        const data = await res.json();
+        alert(`⚡ Opening Checkout for ${tier.toUpperCase()} plan!\nCheckout URL: ${data.checkout_url}`);
+        window.open(data.checkout_url, '_blank');
+      } catch (err) {
+        alert('Checkout error: ' + err.message);
+      }
+    }
   </script>
+
+  <!-- Payment & Subscription Modal -->
+  <div id="paymentModal" class="hidden" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
+    <div class="glass-card" style="max-width: 800px; width: 100%; padding: 2rem; background: rgba(255, 255, 255, 0.96); border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.8);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(0,0,0,0.08); padding-bottom: 1rem;">
+        <div>
+          <h2 style="font-weight: 800; font-size: 1.4rem; color: #0f172a;">Subscription & Billing Plans</h2>
+          <p style="font-size: 0.85rem; color: #64748b; margin-top: 0.2rem;">Choose a plan to unlock higher indexing limits and priority AI reranking</p>
+        </div>
+        <button onclick="closePaymentModal()" style="background: rgba(0,0,0,0.05); border: none; font-size: 1.3rem; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; color: #475569; display: flex; align-items: center; justify-content: center;">&times;</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
+        <!-- Free Plan -->
+        <div style="border: 1px solid rgba(0,0,0,0.1); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; background: #f8fafc;">
+          <div>
+            <h3 style="font-weight: 800; font-size: 1.1rem; color: #334155;">Free Plan</h3>
+            <div style="font-size: 1.8rem; font-weight: 800; margin: 0.5rem 0; color: #0f172a;">$0 <span style="font-size: 0.8rem; font-weight: 500; color: #64748b;">/month</span></div>
+            <ul style="list-style: none; font-size: 0.85rem; color: #475569; line-height: 1.8; margin-top: 0.75rem;">
+              <li>✓ 3 Repositories limit</li>
+              <li>✓ Standard Code Search</li>
+              <li>✓ Community Support</li>
+            </ul>
+          </div>
+          <button style="margin-top: 1.5rem; padding: 0.65rem; border-radius: 10px; border: 1px solid #cbd5e1; background: #e2e8f0; font-weight: 700; color: #475569; cursor: default;">Current Plan</button>
+        </div>
+
+        <!-- Pro Plan -->
+        <div style="border: 2px solid #10b981; border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; background: #ecfdf5; position: relative; box-shadow: 0 10px 25px -5px rgba(16,185,129,0.15);">
+          <span style="position: absolute; top: -12px; right: 15px; background: #10b981; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em;">RECOMMENDED</span>
+          <div>
+            <h3 style="font-weight: 800; font-size: 1.1rem; color: #065f46;">Pro Developer</h3>
+            <div style="font-size: 1.8rem; font-weight: 800; margin: 0.5rem 0; color: #047857;">$19 <span style="font-size: 0.8rem; font-weight: 500; color: #047857;">/month</span></div>
+            <ul style="list-style: none; font-size: 0.85rem; color: #065f46; line-height: 1.8; margin-top: 0.75rem;">
+              <li>✓ Unlimited Repositories</li>
+              <li>✓ Priority Cohere Reranking</li>
+              <li>✓ High-Speed Call Graphs</li>
+              <li>✓ 24/7 Dedicated Support</li>
+            </ul>
+          </div>
+          <button onclick="startCheckout('pro')" style="margin-top: 1.5rem; padding: 0.65rem; border-radius: 10px; border: none; background: #10b981; font-weight: 700; color: #fff; cursor: pointer; box-shadow: 0 4px 12px rgba(16,185,129,0.3); transition: transform 0.1s;">Upgrade to Pro</button>
+        </div>
+
+        <!-- Enterprise Plan -->
+        <div style="border: 1px solid rgba(0,0,0,0.1); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; background: #f8fafc;">
+          <div>
+            <h3 style="font-weight: 800; font-size: 1.1rem; color: #334155;">Enterprise</h3>
+            <div style="font-size: 1.8rem; font-weight: 800; margin: 0.5rem 0; color: #0f172a;">$99 <span style="font-size: 0.8rem; font-weight: 500; color: #64748b;">/month</span></div>
+            <ul style="list-style: none; font-size: 0.85rem; color: #475569; line-height: 1.8; margin-top: 0.75rem;">
+              <li>✓ Unlimited Repositories</li>
+              <li>✓ SAML Single Sign-On</li>
+              <li>✓ Dedicated VPC Deployment</li>
+              <li>✓ Custom SLA & Compliance</li>
+            </ul>
+          </div>
+          <button onclick="startCheckout('enterprise')" style="margin-top: 1.5rem; padding: 0.65rem; border-radius: 10px; border: none; background: #3b82f6; font-weight: 700; color: #fff; cursor: pointer; box-shadow: 0 4px 12px rgba(59,130,246,0.3);">Upgrade Enterprise</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

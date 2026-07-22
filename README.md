@@ -140,6 +140,6 @@ To further build out CodeLens, we are following a structured phase-by-phase impl
 * [x] **Docker Containers**: Production multi-container environment configured in `Dockerfile` and `docker-compose.yml` (FastAPI + PostgreSQL pgvector).
 * [x] **WebSocket Real-Time Logging**: Added `/api/v1/ws/ingest/logs` WebSocket endpoint with real-time log streaming in `static/index.html`.
 
-### Phase 6: User Management, Subscriptions, & Billing
-* [ ] **Authentication & Authorization**: Implement user registration, secure login/signup sessions, and token-based API access control (JWT).
-* [ ] **Payment Gateway Integration**: Integrate Stripe/PayPal subscription models to manage monthly API usage tiers and premium repository limits.
+### Phase 6: User Management, Subscriptions, & Billing (Completed)
+* [x] **Authentication & Authorization**: Password hashing (PBKDF2/SHA256 with salt) and signed JWT token issuance/verification (`auth.py`) across `/auth/register`, `/auth/login`, and `/auth/me`.
+* [x] **Payment Gateway & Tiers**: Subscription tier management (**Free** & **Pro**) and Stripe payment checkout session generator (`billing.py`) at `/billing/checkout`.

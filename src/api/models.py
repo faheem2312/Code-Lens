@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 
@@ -42,3 +42,42 @@ class HealthResponse(BaseModel):
             "reranker":  "rerank-v4.0-pro",
         }
     )
+
+
+class UserRegister(BaseModel):
+    email: str
+    password: str = Field(..., min_length=6)
+    full_name: Optional[str] = ""
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+    email: str
+    tier: str
+
+
+class UserProfile(BaseModel):
+    user_id: str
+    email: str
+    full_name: Optional[str] = ""
+    tier: str = "free"
+    repos_indexed: int = 0
+    repo_limit: int = 3
+
+
+class CheckoutRequest(BaseModel):
+    tier: str = "pro"
+    success_url: str = "http://127.0.0.1:8000/?subscription=success"
+    cancel_url: str = "http://127.0.0.1:8000/?subscription=cancel"
+
+
+class CheckoutResponse(BaseModel):
+    checkout_url: str
+    session_id: str

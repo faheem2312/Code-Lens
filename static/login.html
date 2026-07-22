@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CodeLens — Login & Sign Up</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23ef4444%22 stroke-width=%222.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><circle cx=%2210.5%22 cy=%2210.5%22 r=%226.5%22 /><line x1=%2215.5%22 y1=%2215.5%22 x2=%2220%22 y2=%2220%22 /><path d=%22M8 8.5 L6 10.5 L8 12.5%22 stroke-width=%222%22 /><path d=%22M13 8.5 L15 10.5 L13 12.5%22 stroke-width=%222%22 /></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: linear-gradient(-45deg, #fee2e2, #dcfce7, #dbeafe, #fef08a, #fee2e2);
+      background-size: 400% 400%;
+      animation: rgbGradientAnimation 16s ease infinite;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    @keyframes rgbGradientAnimation {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .login-container {
+      max-width: 420px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(16px);
+      padding: 2.5rem;
+      border-radius: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .logo-area {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+    .title-wrap h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, #ef4444, #10b981, #3b82f6, #ef4444);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: rgbTextGradient 8s linear infinite;
+    }
+    @keyframes rgbTextGradient {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 300% 50%; }
+    }
+    .tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.04);
+      padding: 0.25rem;
+      border-radius: 12px;
+      margin-bottom: 0.5rem;
+    }
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 0.6rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #64748b;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .tab-btn.active {
+      background: #fff;
+      color: #0f172a;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .form-group label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #334155;
+    }
+    .form-group input {
+      padding: 0.75rem 1rem;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      outline: none;
+      background: rgba(255, 255, 255, 0.9);
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus {
+      border-color: #10b981;
+    }
+    .btn-submit {
+      padding: 0.8rem;
+      border-radius: 10px;
+      border: none;
+      background: #0f172a;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: opacity 0.2s;
+    }
+    .btn-submit:hover {
+      opacity: 0.9;
+    }
+    .error-msg {
+      color: #ef4444;
+      font-size: 0.82rem;
+      text-align: center;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="logo-area">
+      <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #ef4444;">
+        <circle cx="10.5" cy="10.5" r="6.5" />
+        <line x1="15.5" y1="15.5" x2="20" y2="20" />
+      </svg>
+      <div class="title-wrap">
+        <h1>CodeLens</h1>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="login-tab" onclick="switchTab('login')">Log In</button>
+      <button class="tab-btn" id="signup-tab" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="login-form" onsubmit="handleLogin(event)" style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="form-group">
+        <label for="login-email">Email Address</label>
+        <input type="email" id="login-email" required placeholder="name@company.com" />
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" required placeholder="••••••••" />
+      </div>
+      <div id="login-error" class="error-msg hidden"></div>
+      <button type="submit" class="btn-submit">Log In</button>
+    </form>
+
+    <!-- Sign Up Form -->
+    <form id="signup-form" class="hidden" onsubmit="handleSignup(event)" style="display: flex; flex-direction: column; gap: 1rem;">
+      <div style="display: flex; gap: 1rem;">
+        <div class="form-group" style="flex: 1;">
+          <label for="signup-firstname">First Name</label>
+          <input type="text" id="signup-firstname" required placeholder="John" />
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label for="signup-lastname">Last Name (Optional)</label>
+          <input type="text" id="signup-lastname" placeholder="Doe" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="signup-email">Email Address</label>
+        <input type="email" id="signup-email" required placeholder="name@company.com" />
+      </div>
+      <div class="form-group">
+        <label for="signup-password">Password</label>
+        <input type="password" id="signup-password" required minlength="6" placeholder="At least 6 characters" />
+      </div>
+      <div id="signup-error" class="error-msg hidden"></div>
+      <button type="submit" class="btn-submit">Create Account</button>
+    </form>
+  </div>
+
+  <script>
+    function switchTab(mode) {
+      const loginForm = document.getElementById('login-form');
+      const signupForm = document.getElementById('signup-form');
+      const loginTab = document.getElementById('login-tab');
+      const signupTab = document.getElementById('signup-tab');
+
+      if (mode === 'login') {
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+        loginTab.classList.add('active');
+        signupTab.classList.remove('active');
+      } else {
+        loginForm.classList.add('hidden');
+        signupForm.classList.remove('hidden');
+        loginTab.classList.remove('active');
+        signupTab.classList.add('active');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab === 'signup') {
+        switchTab('signup');
+      } else {
+        switchTab('login');
+      }
+    });
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const errBox = document.getElementById('login-error');
+      
+      errBox.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Authentication failed');
+        }
+
+        const data = await res.json();
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('user_email', data.email);
+        localStorage.setItem('user_tier', data.tier);
+        
+        window.location.href = '/';
+      } catch (err) {
+        errBox.textContent = err.message;
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    async function handleSignup(e) {
+      e.preventDefault();
+      const firstName = document.getElementById('signup-firstname').value.trim();
+      const lastName = document.getElementById('signup-lastname').value.trim();
+      const full_name = firstName + (lastName ? ' ' + lastName : '');
+      
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
+      const errBox = document.getElementById('signup-error');
+
+      errBox.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/v1/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, full_name })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Account registration failed');
+        }
+
+        const data = await res.json();
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('user_email', data.email);
+        localStorage.setItem('user_tier', data.tier);
+
+        window.location.href = '/';
+      } catch (err) {
+        errBox.textContent = err.message;
+        errBox.classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>

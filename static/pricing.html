@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CodeLens — Pricing & Subscriptions</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23ef4444%22 stroke-width=%222.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><circle cx=%2210.5%22 cy=%2210.5%22 r=%226.5%22 /><line x1=%2215.5%22 y1=%2215.5%22 x2=%2220%22 y2=%2220%22 /><path d=%22M8 8.5 L6 10.5 L8 12.5%22 stroke-width=%222%22 /><path d=%22M13 8.5 L15 10.5 L13 12.5%22 stroke-width=%222%22 /></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-darker: #0f172a;
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --text-main: #0f172a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.5rem;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, #10b981, #3b82f6, #ef4444);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.75rem;
+    }
+    .header p {
+      color: #94a3b8;
+      font-size: 1.1rem;
+    }
+    .nav-back {
+      margin-bottom: 2rem;
+      align-self: flex-start;
+      max-width: 1000px;
+      width: 100%;
+      margin: 0 auto 2rem auto;
+    }
+    .nav-back a {
+      color: #10b981;
+      text-decoration: none;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.9rem;
+    }
+    .nav-back a:hover { text-decoration: underline; }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+      max-width: 1000px;
+      width: 100%;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      backdrop-filter: blur(12px);
+      transition: transform 0.25s, border-color 0.25s;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .card.pro {
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0.6) 100%);
+      border: 2px solid #10b981;
+      box-shadow: 0 10px 30px rgba(16, 185, 129, 0.2);
+      position: relative;
+    }
+    .badge {
+      position: absolute;
+      top: -14px;
+      right: 20px;
+      background: #10b981;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 4px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+    }
+    .plan-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+    .price {
+      font-size: 2.4rem;
+      font-weight: 800;
+      margin: 1rem 0;
+    }
+    .price span {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #94a3b8;
+    }
+    .features {
+      list-style: none;
+      line-height: 2;
+      font-size: 0.95rem;
+      color: #cbd5e1;
+      margin-bottom: 2rem;
+    }
+    .btn {
+      width: 100%;
+      padding: 0.85rem;
+      border-radius: 12px;
+      border: none;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-free {
+      background: rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+      cursor: default;
+    }
+    .btn-pro {
+      background: #10b981;
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    }
+    .btn-pro:hover { opacity: 0.95; transform: scale(1.02); }
+    .btn-enterprise {
+      background: #3b82f6;
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+    .btn-enterprise:hover { opacity: 0.95; transform: scale(1.02); }
+  </style>
+</head>
+<body>
+
+  <div class="nav-back">
+    <a href="/">← Back to CodeLens Workspace</a>
+  </div>
+
+  <div class="header">
+    <h1>CodeLens Subscription Plans</h1>
+    <p>Choose the perfect plan to scale your codebase search and retrieval limits</p>
+  </div>
+
+  <div class="grid">
+    <!-- Free -->
+    <div class="card">
+      <div>
+        <div class="plan-title">Free Plan</div>
+        <div class="price">$0 <span>/month</span></div>
+        <ul class="features">
+          <li>✓ 3 Repositories limit</li>
+          <li>✓ Standard Code Search</li>
+          <li>✓ Basic RAG Context</li>
+          <li>✓ Community Support</li>
+        </ul>
+      </div>
+      <button class="btn btn-free">Current Plan</button>
+    </div>
+
+    <!-- Pro Developer -->
+    <div class="card pro">
+      <span class="badge">RECOMMENDED</span>
+      <div>
+        <div class="plan-title" style="color: #34d399;">Pro Developer</div>
+        <div class="price" style="color: #34d399;">$19 <span>/month</span></div>
+        <ul class="features">
+          <li>✓ Unlimited Repositories</li>
+          <li>✓ Priority Cohere Reranking</li>
+          <li>✓ Symbol Call-Graph Tracing</li>
+          <li>✓ 24/7 Dedicated Support</li>
+        </ul>
+      </div>
+      <button class="btn btn-pro" onclick="startCheckout('pro')">Upgrade to Pro ⚡</button>
+    </div>
+
+    <!-- Enterprise -->
+    <div class="card">
+      <div>
+        <div class="plan-title">Enterprise</div>
+        <div class="price">$99 <span>/month</span></div>
+        <ul class="features">
+          <li>✓ Unlimited Repositories</li>
+          <li>✓ SAML Single Sign-On</li>
+          <li>✓ Dedicated VPC Deployment</li>
+          <li>✓ Custom SLA & Compliance</li>
+        </ul>
+      </div>
+      <button class="btn btn-enterprise" onclick="startCheckout('enterprise')">Upgrade Enterprise</button>
+    </div>
+  </div>
+
+  <script>
+    async function startCheckout(tier) {
+      try {
+        const res = await fetch('/api/v1/billing/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tier: tier,
+            success_url: window.location.origin + '/?subscription=success',
+            cancel_url: window.location.origin + '/pricing'
+          })
+        });
+        if (!res.ok) throw new Error('Checkout initialization failed');
+        const data = await res.json();
+        alert(`⚡ Opening Payment Checkout for ${tier.toUpperCase()} plan!\n\nRedirecting to: ${data.checkout_url}`);
+        window.location.href = data.checkout_url;
+      } catch (err) {
+        alert('Checkout error: ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
