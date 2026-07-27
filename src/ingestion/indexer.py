@@ -7,6 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from supabase import create_client
 from threading import Lock
+from typing import Optional
 
 from src.ingestion.parser      import extract_functions, SKIP_DIRS
 from src.ingestion.chunker     import enrich_chunk
@@ -122,22 +123,34 @@ def clone_repo(repo_url: str) -> str:
     return clone_path
 
 
-def get_existing_hashes(repo_url: str) -> set[str]:
+def get_existing_files_info(repo_url: str) -> dict[str, str]:
     result = (
         supabase.table("chunks")
-        .select("file_hash")
+        .select("file_path, file_hash")
         .eq("repo_url", repo_url)
         .execute()
     )
-    return {row["file_hash"] for row in result.data}
+    return {row["file_path"]: row["file_hash"] for row in (result.data or [])}
 
 
-def index_repository(repo_path: str, repo_url: str) -> dict:
+def index_repository(repo_path: str, repo_url: str, user_email: Optional[str] = None) -> dict:
     repo_url = normalize_repo_url(repo_url)
     task_manager.log(repo_url, "🔍 Scanning codebase directories...")
 
-    existing_hashes = get_existing_hashes(repo_url)
+    db_files = get_existing_files_info(repo_url)
+    
+    # Check if there are legacy absolute paths and purge them
+    has_legacy_paths = any(os.path.isabs(p) or "temp" in p.lower() or "\\" in p for p in db_files.keys())
+    if has_legacy_paths:
+        task_manager.log(repo_url, "🧹 Legacy absolute paths detected. Purging old database chunks...")
+        try:
+            supabase.table("chunks").delete().eq("repo_url", repo_url).execute()
+        except Exception as e:
+            task_manager.log(repo_url, f"⚠️ Error purging legacy chunks: {e}")
+        db_files = {}
+
     all_chunks: list[dict] = []
+    scanned_paths = set()
 
     for file in Path(repo_path).rglob("*"):
         if task_manager.is_cancelled(repo_url):
@@ -147,11 +160,21 @@ def index_repository(repo_path: str, repo_url: str) -> dict:
             continue
         if any(part in SKIP_DIRS for part in file.parts):
             continue
+            
+        # Get relative path with forward slashes
+        rel_path = str(file.relative_to(repo_path)).replace("\\", "/")
+        scanned_paths.add(rel_path)
+        
         chunks = extract_functions(str(file))
+        # Override absolute paths with relative paths in chunks
+        for chunk in chunks:
+            chunk["file_path"] = rel_path
         all_chunks.extend(chunks)
 
     task_manager.log(repo_url, f"📦 Found {len(all_chunks)} logical function blocks across codebase.")
 
+    # Track which files need to be deleted first
+    paths_to_delete = set()
     enriched:     list[dict] = []
     skipped:      int        = 0
     pii_redacted: int        = 0
@@ -161,10 +184,16 @@ def index_repository(repo_path: str, repo_url: str) -> dict:
             raise InterruptedError("Cancelled")
             
         ec = enrich_chunk(chunk, repo_url)
+        rel_path = ec["file_path"]
 
-        if ec["file_hash"] in existing_hashes:
-            skipped += 1
-            continue
+        # Check if file has changed
+        if rel_path in db_files:
+            if ec["file_hash"] == db_files[rel_path]:
+                skipped += 1
+                continue
+            else:
+                # File modified - mark for deletion of old chunks
+                paths_to_delete.add(rel_path)
 
         # 1. PII Scan
         scan = scan_for_pii(ec["content"])
@@ -181,10 +210,34 @@ def index_repository(repo_path: str, repo_url: str) -> dict:
 
         enriched.append(ec)
 
+    # Handle deletions for modified files
+    if paths_to_delete:
+        task_manager.log(repo_url, f"🧹 Clearing old chunks for {len(paths_to_delete)} modified files...")
+        for p in paths_to_delete:
+            try:
+                supabase.table("chunks").delete().eq("repo_url", repo_url).eq("file_path", p).execute()
+            except Exception as e:
+                task_manager.log(repo_url, f"⚠️ Error deleting chunks for {p}: {e}")
+
+    # Handle deletions for deleted files
+    deleted_paths = set(db_files.keys()) - scanned_paths
+    if deleted_paths:
+        task_manager.log(repo_url, f"🗑️ Purging {len(deleted_paths)} deleted files from database...")
+        for p in deleted_paths:
+            try:
+                supabase.table("chunks").delete().eq("repo_url", repo_url).eq("file_path", p).execute()
+            except Exception as e:
+                task_manager.log(repo_url, f"⚠️ Error purging deleted file {p}: {e}")
+
     task_manager.log(repo_url, f"⏭️ Skipped {skipped} unchanged files | 🛡️ Redacted {pii_redacted} PII elements.")
     
     if not enriched:
         task_manager.log(repo_url, "✨ No new or changed chunks to embed.")
+        # Increment repo count on user profile if this was first indexing of the repo
+        if not db_files and user_email:
+            from src.api.auth import user_manager
+            user_manager.increment_repos_indexed(user_email)
+            
         return {
             "total_found": len(all_chunks),
             "skipped": skipped,
@@ -226,6 +279,11 @@ def index_repository(repo_path: str, repo_url: str) -> dict:
         task_manager.log(repo_url, f"  ⚡ Batch {i // BATCH_SIZE + 1} of {total_batches} indexed ({len(batch)} chunks)")
 
     task_manager.log(repo_url, f"🎉 Done! {indexed} chunks indexed successfully.")
+    
+    if user_email:
+        from src.api.auth import user_manager
+        user_manager.increment_repos_indexed(user_email)
+
     return {
         "total_found":  len(all_chunks),
         "skipped":      skipped,
@@ -234,7 +292,7 @@ def index_repository(repo_path: str, repo_url: str) -> dict:
     }
 
 
-def clone_and_index(repo_url: str) -> dict:
+def clone_and_index(repo_url: str, user_email: Optional[str] = None) -> dict:
     """Clone a GitHub repo and index it — used by the API."""
     repo_url = normalize_repo_url(repo_url)
     task_manager.start_task(repo_url)
@@ -245,7 +303,7 @@ def clone_and_index(repo_url: str) -> dict:
             task_manager.complete_task(repo_url, "cancelled")
             return {"status": "cancelled"}
 
-        result = index_repository(repo_path, repo_url)
+        result = index_repository(repo_path, repo_url, user_email)
         if task_manager.is_cancelled(repo_url):
             task_manager.complete_task(repo_url, "cancelled")
             return {"status": "cancelled"}

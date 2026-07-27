@@ -124,13 +124,27 @@ async def websocket_ingest_logs(websocket: WebSocket, repo_url: str):
 
 
 @router.post("/ingest", response_model=IngestResponse)
-def ingest(request: IngestRequest, background_tasks: BackgroundTasks):
+def ingest(request: IngestRequest, background_tasks: BackgroundTasks, authorization: Optional[str] = Header(None)):
     """
     Clone a GitHub repo and index it into Supabase.
     Accepts either:
       - repo_url only (server clones it)
       - repo_path + repo_url (local path, for CLI use)
     """
+    email = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ", 1)[1]
+        payload = verify_token(token)
+        if payload:
+            email = payload.get("sub")
+            user = user_manager.get_user(email)
+            if user:
+                if user.get("repos_indexed", 0) >= user.get("repo_limit", 3):
+                    raise HTTPException(
+                        status_code=400,
+                        detail="You have reached the repository index limit of your tier. Please upgrade to Pro to index more repositories."
+                    )
+
     try:
         if request.repo_path and os.path.exists(request.repo_path):
             # Local path provided — index directly
@@ -138,17 +152,20 @@ def ingest(request: IngestRequest, background_tasks: BackgroundTasks):
                 index_repository,
                 request.repo_path,
                 request.repo_url,
+                email,
             )
         else:
             # No local path — clone from GitHub
             from src.ingestion.indexer import clone_and_index
-            background_tasks.add_task(clone_and_index, request.repo_url)
+            background_tasks.add_task(clone_and_index, request.repo_url, email)
 
         return IngestResponse(
             message="Indexing started — check logs for progress",
             repo_url=request.repo_url,
             status="processing",
         )
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

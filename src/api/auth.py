@@ -178,5 +178,24 @@ class UserManager:
             return user
         return None
 
+    def increment_repos_indexed(self, email: str) -> Optional[dict]:
+        email_clean = email.strip().lower()
+        if supabase:
+            try:
+                res = supabase.table("users").select("repos_indexed").eq("email", email_clean).execute()
+                if res.data:
+                    curr = res.data[0].get("repos_indexed", 0)
+                    res2 = supabase.table("users").update({"repos_indexed": curr + 1}).eq("email", email_clean).execute()
+                    if res2.data:
+                        return res2.data[0]
+            except Exception:
+                pass
+
+        user = self._in_memory_users.get(email_clean)
+        if user:
+            user["repos_indexed"] = user.get("repos_indexed", 0) + 1
+            return user
+        return None
+
 
 user_manager = UserManager()

@@ -50,3 +50,59 @@ def test_checkout_endpoint_unauthorized():
         }
     )
     assert response.status_code == 422
+
+def test_ingest_quota_limit(monkeypatch):
+    from src.api.auth import user_manager, create_access_token
+    import uuid
+    email = f"test_quota_{uuid.uuid4().hex[:6]}@example.com"
+    
+    # Mock user_manager.get_user to simulate exceeded quota
+    mock_user = {
+        "user_id": "usr_test123",
+        "email": email,
+        "repos_indexed": 3,
+        "repo_limit": 3,
+        "tier": "free"
+    }
+    monkeypatch.setattr(user_manager, "get_user", lambda e: mock_user)
+    
+    token = create_access_token({"sub": email, "user_id": "usr_test123", "tier": "free"})
+    
+    response = client.post(
+        "/api/v1/ingest",
+        json={"repo_url": "https://github.com/pallets/click", "repo_path": ""},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 400
+    assert "limit" in response.json()["detail"].lower()
+
+def test_incremental_indexing(tmp_path):
+    repo_url = "https://github.com/mock-user/mock-repo"
+    
+    file1 = tmp_path / "foo.py"
+    file1.write_text("def hello():\n    print('world')\n")
+    
+    file2 = tmp_path / "bar.py"
+    file2.write_text("def goodbye():\n    print('bye')\n")
+    
+    from src.ingestion.indexer import index_repository
+    # Index the repo first time
+    res = index_repository(str(tmp_path), repo_url)
+    assert res["total_found"] == 2
+    assert res["indexed"] == 2
+    assert res["skipped"] == 0
+
+    # Index again with no changes: both should be skipped!
+    res_skip = index_repository(str(tmp_path), repo_url)
+    assert res_skip["total_found"] == 2
+    assert res_skip["indexed"] == 0
+    assert res_skip["skipped"] == 2
+    
+    # Modify one file and delete another
+    file1.write_text("def hello_new():\n    print('new world!')\n")
+    file2.unlink()
+    
+    res_inc = index_repository(str(tmp_path), repo_url)
+    assert res_inc["total_found"] == 1
+    assert res_inc["indexed"] == 1
+    assert res_inc["skipped"] == 0
