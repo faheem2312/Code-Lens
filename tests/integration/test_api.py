@@ -39,3 +39,14 @@ def test_ingest_logs_not_found():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "not_started"
+
+def test_checkout_endpoint_unauthorized():
+    response = client.post(
+        "/api/v1/billing/checkout",
+        json={
+            "tier": "pro",
+            "success_url": "http://127.0.0.1:8000/?subscription=success",
+            "cancel_url": "http://127.0.0.1:8000/pricing"
+        }
+    )
+    assert response.status_code == 422

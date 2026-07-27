@@ -23,7 +23,8 @@ def test_jwt_token_creation_and_verification():
 
 
 def test_user_manager_registration_and_login():
-    email = "user1@example.com"
+    import uuid
+    email = f"test_{uuid.uuid4().hex[:8]}@example.com"
     pwd = "password123"
     
     user = user_manager.register_user(email, pwd, "Test Developer")

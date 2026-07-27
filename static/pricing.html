@@ -209,10 +209,20 @@
 
   <script>
     async function startCheckout(tier) {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in or sign up first to proceed with payment and upgrade.');
+        window.location.href = '/login?tab=signup';
+        return;
+      }
+
       try {
         const res = await fetch('/api/v1/billing/checkout', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
           body: JSON.stringify({
             tier: tier,
             success_url: window.location.origin + '/?subscription=success',

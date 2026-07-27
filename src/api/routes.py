@@ -76,15 +76,19 @@ def get_current_user(authorization: str = Header(..., description="Bearer token"
 
 
 @router.post("/billing/checkout", response_model=CheckoutResponse)
-def checkout(request: CheckoutRequest, authorization: Optional[str] = Header(None)):
-    user_id = "anonymous"
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.split(" ", 1)[1]
-        payload = verify_token(token)
-        if payload:
-            user_id = payload.get("user_id", "anonymous")
-            # Automatically upgrade user tier upon checkout in demo mode
-            user_manager.update_tier(payload.get("sub", ""), request.tier)
+def checkout(request: CheckoutRequest, authorization: str = Header(..., description="Bearer token")):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header format.")
+    token = authorization.split(" ", 1)[1]
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+        
+    user_id = payload.get("user_id", "anonymous")
+    user_email = payload.get("sub", "")
+    
+    # Automatically upgrade user tier upon checkout in demo/local testing mode
+    user_manager.update_tier(user_email, request.tier)
 
     res = create_checkout_session(user_id=user_id, tier=request.tier, success_url=request.success_url, cancel_url=request.cancel_url)
     return CheckoutResponse(
