@@ -234,9 +234,11 @@ def index_repository(repo_path: str, repo_url: str, user_email: Optional[str] = 
     if not enriched:
         task_manager.log(repo_url, "✨ No new or changed chunks to embed.")
         # Increment repo count on user profile if this was first indexing of the repo
-        if not db_files and user_email:
+        if user_email:
             from src.api.auth import user_manager
-            user_manager.increment_repos_indexed(user_email)
+            user_manager.add_user_repository(user_email, repo_url)
+            if not db_files:
+                user_manager.increment_repos_indexed(user_email)
             
         return {
             "total_found": len(all_chunks),
@@ -282,6 +284,7 @@ def index_repository(repo_path: str, repo_url: str, user_email: Optional[str] = 
     
     if user_email:
         from src.api.auth import user_manager
+        user_manager.add_user_repository(user_email, repo_url)
         user_manager.increment_repos_indexed(user_email)
 
     return {

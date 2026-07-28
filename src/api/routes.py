@@ -75,6 +75,43 @@ def get_current_user(authorization: str = Header(..., description="Bearer token"
     )
 
 
+@router.get("/user/repositories")
+def get_user_repositories(authorization: str = Header(..., description="Bearer token")):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header format.")
+    token = authorization.split(" ", 1)[1]
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    
+    email = payload.get("sub", "")
+    repos = user_manager.get_user_repositories(email)
+    return {"repositories": repos}
+
+
+@router.delete("/user/repositories")
+def delete_user_repository(repo_url: str, authorization: str = Header(..., description="Bearer token")):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header format.")
+    token = authorization.split(" ", 1)[1]
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    
+    email = payload.get("sub", "")
+    user_manager.delete_user_repository(email, repo_url)
+    
+    # Purge chunks associated with this repo
+    from src.ingestion.indexer import supabase
+    if supabase:
+        try:
+            supabase.table("chunks").delete().eq("repo_url", repo_url).execute()
+        except Exception:
+            pass
+            
+    return {"status": "success", "message": "Repository removed successfully"}
+
+
 @router.post("/billing/checkout", response_model=CheckoutResponse)
 def checkout(request: CheckoutRequest, authorization: str = Header(..., description="Bearer token")):
     if not authorization.startswith("Bearer "):
@@ -192,6 +229,10 @@ def cancel_ingest(repo_url: str):
     return {"message": "Cancellation request submitted", "repo_url": repo_url}
 
 
+from fastapi.responses import StreamingResponse
+import json
+
+
 @router.post("/query", response_model=QueryResponse)
 def query(request: QueryRequest):
     try:
@@ -214,3 +255,19 @@ def query(request: QueryRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/query/stream")
+def query_stream(request: QueryRequest):
+    from src.query import query_codelens_stream
+
+    def event_generator():
+        try:
+            for data in query_codelens_stream(question=request.question, repo_url=request.repo_url, top_k=request.top_k):
+                yield f"data: {json.dumps(data)}\n\n"
+        except ValueError as e:
+            yield f"data: {json.dumps({'type': 'error', 'detail': str(e)})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'detail': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")

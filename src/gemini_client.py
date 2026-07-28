@@ -47,6 +47,25 @@ def generate_text(system_prompt: str, user_prompt: str) -> tuple[str, int]:
                 raise
 
 
+def generate_text_stream(system_prompt: str, user_prompt: str):
+    full_prompt = f"{system_prompt}\n\n{user_prompt}"
+    try:
+        response = client.models.generate_content_stream(
+            model=GEMINI_MODEL,
+            contents=full_prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.1,
+                max_output_tokens=1500,
+            ),
+        )
+        for chunk in response:
+            if chunk.text:
+                yield chunk.text
+    except Exception as e:
+        safe_print(f"  ⚠️ Gemini generate stream error: {e}")
+        raise
+
+
 def embed_texts(texts: list[str]) -> list[list[float]]:
     vectors = []
     for i, text in enumerate(texts):

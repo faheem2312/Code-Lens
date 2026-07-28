@@ -90,6 +90,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABAS
 class UserManager:
     def __init__(self):
         self._in_memory_users = {}
+        self._in_memory_user_repos = {}
 
     def register_user(self, email: str, password: str, full_name: str = "") -> dict:
         email_clean = email.strip().lower()
@@ -196,6 +197,58 @@ class UserManager:
             user["repos_indexed"] = user.get("repos_indexed", 0) + 1
             return user
         return None
+
+    def add_user_repository(self, email: str, repo_url: str):
+        email_clean = email.strip().lower()
+        use_in_memory = True
+        
+        if supabase:
+            try:
+                res = supabase.table("users").select("user_id").eq("email", email_clean).execute()
+                if res.data:
+                    uid = res.data[0]["user_id"]
+                    link_res = supabase.table("user_repositories").select("*").eq("user_id", uid).eq("repo_url", repo_url).execute()
+                    if not link_res.data:
+                        supabase.table("user_repositories").insert({"user_id": uid, "repo_url": repo_url}).execute()
+                    use_in_memory = False
+            except Exception:
+                use_in_memory = True
+
+        if use_in_memory:
+            if email_clean not in self._in_memory_user_repos:
+                self._in_memory_user_repos[email_clean] = []
+            if repo_url not in self._in_memory_user_repos[email_clean]:
+                self._in_memory_user_repos[email_clean].append(repo_url)
+
+    def get_user_repositories(self, email: str) -> list[str]:
+        email_clean = email.strip().lower()
+        if supabase:
+            try:
+                res = supabase.table("users").select("user_id").eq("email", email_clean).execute()
+                if res.data:
+                    uid = res.data[0]["user_id"]
+                    links_res = supabase.table("user_repositories").select("repo_url").eq("user_id", uid).execute()
+                    return [r["repo_url"] for r in (links_res.data or [])]
+            except Exception:
+                pass
+        return self._in_memory_user_repos.get(email_clean, [])
+
+    def delete_user_repository(self, email: str, repo_url: str):
+        email_clean = email.strip().lower()
+        use_in_memory = True
+        if supabase:
+            try:
+                res = supabase.table("users").select("user_id").eq("email", email_clean).execute()
+                if res.data:
+                    uid = res.data[0]["user_id"]
+                    supabase.table("user_repositories").delete().eq("user_id", uid).eq("repo_url", repo_url).execute()
+                    use_in_memory = False
+            except Exception:
+                use_in_memory = True
+        if use_in_memory:
+            if email_clean in self._in_memory_user_repos:
+                if repo_url in self._in_memory_user_repos[email_clean]:
+                    self._in_memory_user_repos[email_clean].remove(repo_url)
 
 
 user_manager = UserManager()

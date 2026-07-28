@@ -106,3 +106,58 @@ def test_incremental_indexing(tmp_path):
     assert res_inc["total_found"] == 1
     assert res_inc["indexed"] == 1
     assert res_inc["skipped"] == 0
+
+def test_user_repositories_endpoints():
+    from src.api.auth import user_manager, create_access_token
+    import uuid
+    email = f"test_repos_{uuid.uuid4().hex[:6]}@example.com"
+    user = user_manager.register_user(email, "pass1234")
+    token = create_access_token({"sub": email, "user_id": user["user_id"], "tier": "free"})
+    
+    # 1. Add repository manually to user's database
+    user_manager.add_user_repository(email, "https://github.com/pallets/click")
+    
+    # 2. Query endpoint
+    response = client.get(
+        "/api/v1/user/repositories",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "repositories" in data
+    assert "https://github.com/pallets/click" in data["repositories"]
+    
+    # 3. Delete endpoint
+    del_res = client.delete(
+        "/api/v1/user/repositories?repo_url=https://github.com/pallets/click",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert del_res.status_code == 200
+    
+    # 4. Verify unlinked
+    response2 = client.get(
+        "/api/v1/user/repositories",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert "https://github.com/pallets/click" not in response2.json()["repositories"]
+
+
+def test_query_stream_endpoint(monkeypatch):
+    def fake_stream(question, repo_url, top_k=8):
+        yield {"type": "metadata", "sources": ["src/main.py"], "chunks": []}
+        yield {"type": "token", "token": "Hello "}
+        yield {"type": "token", "token": "world!"}
+        yield {"type": "done", "latency_ms": 120, "tokens": 2}
+
+    monkeypatch.setattr("src.query.query_codelens_stream", fake_stream)
+
+    response = client.post(
+        "/api/v1/query/stream",
+        json={"question": "How does it work?", "repo_url": "https://github.com/pallets/flask"}
+    )
+    assert response.status_code == 200
+    assert "text/event-stream" in response.headers["content-type"]
+    content = response.text
+    assert "data: {\"type\": \"metadata\"" in content
+    assert "data: {\"type\": \"token\", \"token\": \"Hello \"}" in content
+    assert "data: {\"type\": \"done\"" in content
