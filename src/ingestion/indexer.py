@@ -179,7 +179,10 @@ def index_repository(repo_path: str, repo_url: str, user_email: Optional[str] = 
     skipped:      int        = 0
     pii_redacted: int        = 0
 
-    for chunk in all_chunks:
+    total_chunks = len(all_chunks)
+    task_manager.log(repo_url, f"🛡️ Scanning {total_chunks} blocks for PII and secrets...")
+
+    for idx, chunk in enumerate(all_chunks, 1):
         if task_manager.is_cancelled(repo_url):
             raise InterruptedError("Cancelled")
             
@@ -209,6 +212,9 @@ def index_repository(repo_path: str, repo_url: str, user_email: Optional[str] = 
             ec["embed_text"] = redact_pii(redacted_content)
 
         enriched.append(ec)
+
+        if idx % 50 == 0 or idx == total_chunks:
+            task_manager.log(repo_url, f"  🛡️ Security scanned {idx}/{total_chunks} blocks...")
 
     # Handle deletions for modified files
     if paths_to_delete:

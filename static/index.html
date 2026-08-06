@@ -1679,11 +1679,17 @@
       const logConsoleCard = document.getElementById('logConsoleCard');
       const logConsoleBody = document.getElementById('logConsoleBody');
       const consolePulse = document.getElementById('consolePulse');
-      const repoUrl = document.getElementById('indexRepoUrl').value.trim();
+      let repoUrl = document.getElementById('indexRepoUrl').value.trim();
 
       if (!repoUrl) {
         alert('Please enter a GitHub repository URL.');
         return;
+      }
+
+      // Auto-fix double-pasted URLs (e.g. https://github.com/...https://github.com/...)
+      if ((repoUrl.match(/https:\/\//g) || []).length > 1) {
+        repoUrl = 'https://' + repoUrl.split('https://').filter(Boolean)[0];
+        document.getElementById('indexRepoUrl').value = repoUrl;
       }
 
       if (!repoUrl.startsWith('https://github.com/')) {
